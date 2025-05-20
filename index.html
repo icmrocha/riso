@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+<!--  <!DOCTYPE html>
 <html lang="pt-BR">
 <head>
   <meta charset="UTF-8">
@@ -25,5 +25,91 @@
 </head>
 <body>
   <img src="logo-riso.png" alt="Logotipo do RISO">
+</body>
+</html>
+-->
+
+
+
+
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>RISO</title>
+  <style>
+    body {
+      margin: 0;
+      padding: 0;
+      background-color: #fffaf5;
+      color: #3b2f2f;
+      font-family: 'Helvetica Neue', sans-serif;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      align-items: center;
+      height: 100vh;
+      text-align: center;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .fade-in {
+      opacity: 0;
+      animation: fadeIn 2s ease-in-out forwards;
+    }
+
+    @keyframes fadeIn {
+      to {
+        opacity: 1;
+      }
+    }
+
+    img {
+      max-width: 250px;
+      width: 60%;
+      margin-bottom: 20px;
+    }
+
+    h1 {
+      font-size: 1.5rem;
+      font-weight: 400;
+      margin: 0;
+      padding: 0 20px;
+    }
+
+    @media (min-width: 600px) {
+      h1 {
+        font-size: 2rem;
+      }
+    }
+
+    footer {
+      position: absolute;
+      bottom: 20px;
+      font-size: 0.9rem;
+      color: #6e5c5c;
+    }
+
+    footer a {
+      color: #6e5c5c;
+      text-decoration: none;
+      margin: 0 10px;
+    }
+
+    footer a:hover {
+      text-decoration: underline;
+    }
+  </style>
+</head>
+<body>
+  <img src="logo-riso.png" alt="Logotipo do RISO" class="fade-in" />
+  <h1 class="fade-in" style="animation-delay: 0.5s;">Bem-vindo ao RISO — Risotos artesanais, feitos com alma.</h1>
+
+  <footer class="fade-in" style="animation-delay: 1.5s;">
+    <a href="https://instagram.com/casa.riso" target="_blank">Instagram</a> |
+    <a href="https://wa.me/5521983933131" target="_blank">WhatsApp</a>
+  </footer>
 </body>
 </html>
