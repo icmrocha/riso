@@ -7,7 +7,7 @@
   <style>
     body {
       margin: 0;
-      padding: 0;
+      padding: 20px;
       background-color: #fffaf5;
       color: #3b2f2f;
       font-family: 'Helvetica Neue', sans-serif;
@@ -15,10 +15,9 @@
       flex-direction: column;
       justify-content: center;
       align-items: center;
-      height: 100vh;
+      min-height: 100vh;
       text-align: center;
-      position: relative;
-      overflow: hidden;
+      box-sizing: border-box;
     }
 
     .fade-in {
@@ -33,7 +32,7 @@
     }
 
     img {
-      max-width: 400px;
+      max-width: 250px;
       width: 60%;
       margin-bottom: 20px;
     }
@@ -51,11 +50,14 @@
       }
     }
 
+    .spacer {
+      flex-grow: 1;
+    }
+
     footer {
-      position: absolute;
-      bottom: 20px;
       font-size: 0.9rem;
       color: #6e5c5c;
+      margin-top: 40px;
     }
 
     footer a {
@@ -72,10 +74,10 @@
 <body>
   <img src="logo-riso.png" alt="Logotipo do RISO" class="fade-in" />
   <h1 class="fade-in" style="animation-delay: 0.5s;">Vem aí...</h1>
-
+  <div class="spacer"></div>
   <footer class="fade-in" style="animation-delay: 1.5s;">
     <a href="https://instagram.com/casa.riso" target="_blank">Instagram</a> |
-    <a href="https://wa.me/5521983933131" target="_blank">WhatsApp</a>
+    <a href="https://wa.me/5521983833131" target="_blank">WhatsApp</a>
   </footer>
 </body>
 </html>
