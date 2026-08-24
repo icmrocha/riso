@@ -23,12 +23,28 @@
       justify-content: center; 
       align-items: center;
       overflow: hidden;
-      
-      /* Transição suave ao trocar a imagem */
-      transition: background-image 1s ease-in-out;
+      position: relative;
+      background-color: #000;
+    }
+
+    /* Camadas para o efeito de crossfade super suave */
+    .bg-layer {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
       background-size: cover;
       background-position: center;
       background-repeat: no-repeat;
+      z-index: -1;
+      /* Duração da transição de opacidade */
+      transition: opacity 2s ease-in-out; 
+      opacity: 0;
+    }
+
+    .bg-layer.active {
+      opacity: 1;
     }
 
     .fade-in {
@@ -51,6 +67,7 @@
       padding: 14px 28px;
       border-radius: 30px;
       backdrop-filter: blur(4px);
+      z-index: 10;
     }
 
     .links-container a {
@@ -78,6 +95,10 @@
 </head>
 <body>
 
+  <!-- As duas camadas de fundo sobrepostas -->
+  <div id="bg1" class="bg-layer active"></div>
+  <div id="bg2" class="bg-layer"></div>
+
   <div class="links-container fade-in">
     <a href="https://instagram.com/casa.riso" target="_blank">Instagram</a> |
     <a href="https://wa.me/5524992438242" target="_blank">Reservas</a> |
@@ -85,7 +106,6 @@
   </div>
 
   <script>
-    // Lista com os nomes dos seus arquivos de imagem
     const imagens = [
       'agora-borogodo-riso_websize.jpg',
       'RISO-thewonder-13_websize.jpg',
@@ -93,26 +113,36 @@
       'RISO-thewonder-57_websize.jpg',
       'RISO-thewonder-131_websize.jpg',
       'RISO-thewonder-109_websize.jpg'
-
-
-      
     ];
 
     let indiceAtual = 0;
+    let camadaAtiva = 1;
 
-    function trocarFundo() {
-      // Atualiza a imagem de fundo do body
-      document.body.style.backgroundImage = `url('${imagens[indiceAtual]}')`;
-      
-      // Avança para a próxima imagem ou volta para a primeira
+    const bg1 = document.getElementById('bg1');
+    const bg2 = document.getElementById('bg2');
+
+    // Carrega a primeira imagem imediatamente
+    bg1.style.backgroundImage = `url('${imagens[0]}')`;
+
+    function trocarFundoSuave() {
       indiceAtual = (indiceAtual + 1) % imagens.length;
+      const proximaImagem = imagens[indiceAtual];
+
+      if (camadaAtiva === 1) {
+        bg2.style.backgroundImage = `url('${proximaImagem}')`;
+        bg2.classList.add('active');
+        bg1.classList.remove('active');
+        camadaAtiva = 2;
+      } else {
+        bg1.style.backgroundImage = `url('${proximaImagem}')`;
+        bg1.classList.add('active');
+        bg2.classList.remove('active');
+        camadaAtiva = 1;
+      }
     }
 
-    // Carrega a primeira imagem imediatamente ao abrir
-    trocarFundo();
-
-    // Define o tempo de troca em milissegundos (5000ms = 5 segundos)
-    setInterval(trocarFundo, 5000);
+    // Troca de imagem a cada 4.5 segundos (4500ms)
+    setInterval(trocarFundoSuave, 4500);
   </script>
 
 </body>
