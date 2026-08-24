@@ -23,24 +23,12 @@
       justify-content: center; 
       align-items: center;
       overflow: hidden;
-      position: relative;
-    }
-
-    /* Imagem de fundo com desfoque */
-    body::before {
-      content: '';
-      position: absolute;
-      top: 0;
-      left: 0;
-      width: 100%;
-      height: 100%;
-      z-index: -1;
+      
+      /* Fundo original sem desfoque */
       background-image: url('agora-borogodo-riso_websize.jpg');
       background-size: cover;
       background-position: center;
       background-repeat: no-repeat;
-      filter: blur(1px);
-      transform: scale(1.05);
     }
 
     .fade-in {
@@ -54,30 +42,43 @@
       }
     }
 
-    /* Bloco de links centralizado */
+    /* Container de links maior e centralizado */
     .links-container {
-      font-size: 0.9rem;
+      font-size: 1.25rem; /* Aumentado o tamanho da fonte */
+      font-weight: 500;
       color: #ffffff;
-      background-color: rgba(0, 0, 0, 0.2);
-      padding: 10px 20px;
-      border-radius: 20px;
-      backdrop-filter: blur(4px);
+      background-color: rgba(0, 0, 0, 0.35); /* Leve fundo escuro para garantir leitura */
+      padding: 14px 28px;
+      border-radius: 30px;
+      backdrop-filter: blur(4px); /* Suave desfoque apenas no balão dos links */
     }
 
     .links-container a {
       color: #ffffff;
       text-decoration: none;
-      margin: 0 10px;
+      margin: 0 12px;
+      transition: opacity 0.2s ease;
     }
 
     .links-container a:hover {
+      opacity: 0.8;
       text-decoration: underline;
+    }
+
+    /* Ajuste para telas pequenas (celulares) */
+    @media (max-width: 600px) {
+      .links-container {
+        font-size: 1rem;
+        padding: 10px 18px;
+      }
+      .links-container a {
+        margin: 0 6px;
+      }
     }
   </style>
 </head>
 <body>
 
-  <!-- Links centralizados no meio da tela -->
   <div class="links-container fade-in">
     <a href="https://instagram.com/casa.riso" target="_blank">Instagram</a> |
     <a href="https://wa.me/5524992438242" target="_blank">Reservas</a> |
