@@ -20,17 +20,27 @@
       width: 100vw;
       font-family: 'Helvetica Neue', sans-serif;
       display: flex;
-      flex-direction: column;
-      justify-content: space-between;
+      justify-content: center; 
       align-items: center;
-      padding: 40px 20px;
       overflow: hidden;
-      
-      /* Configuração do fundo */
+      position: relative;
+    }
+
+    /* Imagem de fundo com desfoque */
+    body::before {
+      content: '';
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      z-index: -1;
       background-image: url('agora-borogodo-riso_websize.jpg');
       background-size: cover;
       background-position: center;
       background-repeat: no-repeat;
+      filter: blur(4px);
+      transform: scale(1.05);
     }
 
     .fade-in {
@@ -44,55 +54,35 @@
       }
     }
 
-    /* Título principal centralizado */
-    h1.title {
-      font-size: 8rem;
-      font-weight: 300;
-      color: #ffffff;
-      letter-spacing: 2px;
-      margin: auto 0;
-      text-transform: uppercase;
-    }
-
-    footer {
+    /* Bloco de links centralizado */
+    .links-container {
       font-size: 0.9rem;
       color: #ffffff;
       background-color: rgba(0, 0, 0, 0.2);
-      padding: 8px 16px;
+      padding: 10px 20px;
       border-radius: 20px;
       backdrop-filter: blur(4px);
-      margin-bottom: 40px;
     }
 
-    footer a {
+    .links-container a {
       color: #ffffff;
       text-decoration: none;
       margin: 0 10px;
     }
 
-    footer a:hover {
+    .links-container a:hover {
       text-decoration: underline;
-    }
-
-    /* Ajuste para telas menores (Celulares) */
-    @media (max-width: 600px) {
-      h1.title {
-        font-size: 4rem;
-      }
     }
   </style>
 </head>
 <body>
 
-  <!-- Título RISO estilo marca d'água/hero -->
-  <h1 class="title fade-in"></h1>
-
-  <!-- Rodapé com os links -->
-  <footer class="fade-in" style="animation-delay: 0.5s;">
+  <!-- Links centralizados no meio da tela -->
+  <div class="links-container fade-in">
     <a href="https://instagram.com/casa.riso" target="_blank">Instagram</a> |
     <a href="https://wa.me/5524992438242" target="_blank">Reservas</a> |
     <a href="cardapio.pdf" target="_blank">Cardápio</a>
-  </footer>
+  </div>
 
 </body>
 </html>
