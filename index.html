@@ -35,9 +35,11 @@
       width: 100%;
       height: 100%;
       background-size: cover;
-      background-position: center;
+      /* O posicionamento padrão é center center, mas será sobrescrito pelo JS */
+      background-position: center center; 
       background-repeat: no-repeat;
       z-index: -1;
+      
       /* Duração da transição de opacidade */
       transition: opacity 2s ease-in-out; 
       opacity: 0;
@@ -106,13 +108,32 @@
   </div>
 
   <script>
-    const imagens = [
-      'agora-borogodo-riso_websize.jpg',
-      'RISO-thewonder-13_websize.jpg',
-      'RISO-thewonder-40_websize.jpg',
-      'RISO-thewonder-57_websize.jpg',
-      'RISO-thewonder-131_websize.jpg',
-      'RISO-thewonder-109_websize.jpg'
+    // LISTA DE IMAGENS COM POSICIONAMENTO PERSONALIZADO
+    const imagensConfig = [
+      { 
+        src: 'agora-borogodo-riso_websize.jpg', 
+        position: 'center center' // Imagem original, centralizada
+      },
+      { 
+        src: 'RISO-thewonder-13_websize.jpg', 
+        position: 'center center' // Ajuste se necessário
+      },
+      { 
+        src: 'RISO-thewonder-40_websize.jpg', 
+        position: 'center 20%' // Exemplo: sobe a imagem (mostra mais o topo)
+      },
+      { 
+        src: 'RISO-thewonder-57_websize.jpg', 
+        position: 'center 80%' // Exemplo: desce a imagem (mostra mais o fundo)
+      },
+      { 
+        src: 'RISO-thewonder-131_websize.jpg', 
+        position: 'left center' // Exemplo: alinha à esquerda
+      },
+      { 
+        src: 'RISO-thewonder-109_websize.jpg', 
+        position: 'right center' // Exemplo: alinha à direita
+      }
     ];
 
     let indiceAtual = 0;
@@ -121,28 +142,33 @@
     const bg1 = document.getElementById('bg1');
     const bg2 = document.getElementById('bg2');
 
-    // Carrega a primeira imagem imediatamente
-    bg1.style.backgroundImage = `url('${imagens[0]}')`;
+    // Carrega a primeira imagem IMEDIATAMENTE (com sua posição)
+    function configurarImagem(camada, config) {
+      camada.style.backgroundImage = `url('${config.src}')`;
+      camada.style.backgroundPosition = config.position;
+    }
+
+    configurarImagem(bg1, imagensConfig[0]);
 
     function trocarFundoSuave() {
-      indiceAtual = (indiceAtual + 1) % imagens.length;
-      const proximaImagem = imagens[indiceAtual];
+      indiceAtual = (indiceAtual + 1) % imagensConfig.length;
+      const configProxima = imagensConfig[indiceAtual];
 
       if (camadaAtiva === 1) {
-        bg2.style.backgroundImage = `url('${proximaImagem}')`;
+        configurarImagem(bg2, configProxima);
         bg2.classList.add('active');
         bg1.classList.remove('active');
         camadaAtiva = 2;
       } else {
-        bg1.style.backgroundImage = `url('${proximaImagem}')`;
+        configurarImagem(bg1, configProxima);
         bg1.classList.add('active');
         bg2.classList.remove('active');
         camadaAtiva = 1;
       }
     }
 
-    // Troca de imagem a cada 4.5 segundos (4500ms)
-    setInterval(trocarFundoSuave, 4500);
+    // Troca de imagem a cada 3.5 segundos (3500ms)
+    setInterval(trocarFundoSuave, 3500);
   </script>
 
 </body>
