@@ -78,6 +78,7 @@
       flex-direction: column;
       gap: 10px;
       box-shadow: 0 4px 10px rgba(0,0,0,0.5);
+      min-width: 240px;
     }
 
     #test-panel select, #test-panel input {
@@ -86,7 +87,7 @@
 
     #test-panel button {
       cursor: pointer;
-      padding: 5px;
+      padding: 6px;
       background: #fff;
       border: none;
       border-radius: 4px;
@@ -104,9 +105,9 @@
     <a href="cardapio.pdf" target="_blank">Cardápio</a>
   </div>
 
-  <!-- CONTROLES VISUAIS NA TELA -->
+  <!-- CONTROLES VISUAIS COM SLIDER DE ZOOM -->
   <div id="test-panel">
-    <strong>PAINEL DE AJUSTE DE POSIÇÃO</strong>
+    <strong>PAINEL DE TESTE (POSIÇÃO & ZOOM)</strong>
     
     <label>Escolha a imagem:</label>
     <select id="select-img" onchange="carregarImagemTeste()">
@@ -118,42 +119,56 @@
       <option value="RISO-thewonder-109_websize.jpg">RISO-thewonder-109</option>
     </select>
 
+    <label>Zoom / Tamanho: <span id="val-zoom">cover</span></label>
+    <input type="range" id="range-zoom" min="50" max="200" value="100" oninput="atualizarEstilos()">
+
     <label>Posição Vertical (Y): <span id="val-y">50%</span></label>
-    <input type="range" id="range-y" min="0" max="100" value="50" oninput="atualizarPosicao()">
+    <input type="range" id="range-y" min="0" max="100" value="50" oninput="atualizarEstilos()">
 
     <label>Posição Horizontal (X): <span id="val-x">50%</span></label>
-    <input type="range" id="range-x" min="0" max="100" value="50" oninput="atualizarPosicao()">
+    <input type="range" id="range-x" min="0" max="100" value="50" oninput="atualizarEstilos()">
 
-    <button onclick="copiarCodigo()">Copiar Valor Gerado</button>
+    <button onclick="copiarCodigo()">Copiar Configuração</button>
   </div>
 
   <script>
     const bg = document.getElementById('bg1');
     const select = document.getElementById('select-img');
+    const rangeZoom = document.getElementById('range-zoom');
     const rangeY = document.getElementById('range-y');
     const rangeX = document.getElementById('range-x');
+    
+    const valZoom = document.getElementById('val-zoom');
     const valY = document.getElementById('val-y');
     const valX = document.getElementById('val-x');
 
     function carregarImagemTeste() {
       bg.style.backgroundImage = `url('${select.value}')`;
-      atualizarPosicao();
+      atualizarEstilos();
     }
 
-    function atualizarPosicao() {
+    function atualizarEstilos() {
       const pos = `${rangeX.value}% ${rangeY.value}%`;
       bg.style.backgroundPosition = pos;
+      
+      // Se o zoom estiver em 100%, usa o padrão 'cover' (que preenche a tela inteira)
+      const zoomValue = rangeZoom.value == 100 ? 'cover' : `${rangeZoom.value}%`;
+      bg.style.backgroundSize = zoomValue;
+
       valX.innerText = `${rangeX.value}%`;
       valY.innerText = `${rangeY.value}%`;
+      valZoom.innerText = zoomValue;
     }
 
     function copiarCodigo() {
-      const texto = `{ src: '${select.value}', position: '${rangeX.value}% ${rangeY.value}%' }`;
+      const zoomValue = rangeZoom.value == 100 ? 'cover' : `${rangeZoom.value}%`;
+      const texto = `{ src: '${select.value}', position: '${rangeX.value}% ${rangeY.value}%', size: '${zoomValue}' }`;
+      
       navigator.clipboard.writeText(texto);
-      alert(`Copiado para a área de transferência:\n${texto}`);
+      alert(`Configuração copiada:\n${texto}`);
     }
 
-    // Inicializa com a primeira imagem
+    // Inicializa
     carregarImagemTeste();
   </script>
 
