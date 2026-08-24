@@ -7,7 +7,7 @@
   <link rel="manifest" href="/site.webmanifest">
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>RISO</title>
+  <title>RISO - Testador de Imagens</title>
   <style>
     * {
       box-sizing: border-box;
@@ -27,7 +27,6 @@
       background-color: #000;
     }
 
-    /* Camadas para o efeito de crossfade super suave */
     .bg-layer {
       position: absolute;
       top: 0;
@@ -35,13 +34,10 @@
       width: 100%;
       height: 100%;
       background-size: cover;
-      /* O posicionamento padrão é center center, mas será sobrescrito pelo JS */
       background-position: center center; 
       background-repeat: no-repeat;
       z-index: -1;
-      
-      /* Duração da transição de opacidade */
-      transition: opacity 2s ease-in-out; 
+      transition: opacity 1s ease-in-out; 
       opacity: 0;
     }
 
@@ -49,18 +45,6 @@
       opacity: 1;
     }
 
-    .fade-in {
-      opacity: 0;
-      animation: fadeIn 1s ease-in-out forwards;
-    }
-
-    @keyframes fadeIn {
-      to {
-        opacity: 1;
-      }
-    }
-
-    /* Container de links centralizado */
     .links-container {
       font-size: 1.25rem;
       font-weight: 500;
@@ -76,99 +60,101 @@
       color: #ffffff;
       text-decoration: none;
       margin: 0 12px;
-      transition: opacity 0.2s ease;
     }
 
-    .links-container a:hover {
-      opacity: 0.8;
-      text-decoration: underline;
+    /* PAINEL DE TESTES FIXO */
+    #test-panel {
+      position: fixed;
+      bottom: 20px;
+      left: 20px;
+      background: rgba(0, 0, 0, 0.85);
+      color: #fff;
+      padding: 15px;
+      border-radius: 12px;
+      z-index: 9999;
+      font-family: monospace;
+      font-size: 12px;
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+      box-shadow: 0 4px 10px rgba(0,0,0,0.5);
     }
 
-    @media (max-width: 600px) {
-      .links-container {
-        font-size: 1rem;
-        padding: 10px 18px;
-      }
-      .links-container a {
-        margin: 0 6px;
-      }
+    #test-panel select, #test-panel input {
+      width: 100%;
+    }
+
+    #test-panel button {
+      cursor: pointer;
+      padding: 5px;
+      background: #fff;
+      border: none;
+      border-radius: 4px;
+      font-weight: bold;
     }
   </style>
 </head>
 <body>
 
-  <!-- As duas camadas de fundo sobrepostas -->
   <div id="bg1" class="bg-layer active"></div>
-  <div id="bg2" class="bg-layer"></div>
 
-  <div class="links-container fade-in">
+  <div class="links-container">
     <a href="https://instagram.com/casa.riso" target="_blank">Instagram</a> |
     <a href="https://wa.me/5524992438242" target="_blank">Reservas</a> |
     <a href="cardapio.pdf" target="_blank">Cardápio</a>
   </div>
 
+  <!-- CONTROLES VISUAIS NA TELA -->
+  <div id="test-panel">
+    <strong>PAINEL DE AJUSTE DE POSIÇÃO</strong>
+    
+    <label>Escolha a imagem:</label>
+    <select id="select-img" onchange="carregarImagemTeste()">
+      <option value="agora-borogodo-riso_websize.jpg">agora-borogodo-riso</option>
+      <option value="RISO-thewonder-13_websize.jpg">RISO-thewonder-13</option>
+      <option value="RISO-thewonder-40_websize.jpg">RISO-thewonder-40</option>
+      <option value="RISO-thewonder-57_websize.jpg">RISO-thewonder-57</option>
+      <option value="RISO-thewonder-131_websize.jpg">RISO-thewonder-131</option>
+      <option value="RISO-thewonder-109_websize.jpg">RISO-thewonder-109</option>
+    </select>
+
+    <label>Posição Vertical (Y): <span id="val-y">50%</span></label>
+    <input type="range" id="range-y" min="0" max="100" value="50" oninput="atualizarPosicao()">
+
+    <label>Posição Horizontal (X): <span id="val-x">50%</span></label>
+    <input type="range" id="range-x" min="0" max="100" value="50" oninput="atualizarPosicao()">
+
+    <button onclick="copiarCodigo()">Copiar Valor Gerado</button>
+  </div>
+
   <script>
-    // LISTA DE IMAGENS COM POSICIONAMENTO PERSONALIZADO
-    const imagensConfig = [
-      { 
-        src: 'agora-borogodo-riso_websize.jpg', 
-        position: 'center center' // Imagem original, centralizada
-      },
-      { 
-        src: 'RISO-thewonder-13_websize.jpg', 
-        position: 'center 50%' // Ajuste se necessário
-      },
-      { 
-        src: 'RISO-thewonder-40_websize.jpg', 
-        position: 'center 20%' // Exemplo: sobe a imagem (mostra mais o topo)
-      },
-      { 
-        src: 'RISO-thewonder-57_websize.jpg', 
-        position: 'center 80%' // Exemplo: desce a imagem (mostra mais o fundo)
-      },
-      { 
-        src: 'RISO-thewonder-131_websize.jpg', 
-        position: 'left center' // Exemplo: alinha à esquerda
-      },
-      { 
-        src: 'RISO-thewonder-109_websize.jpg', 
-        position: 'right center' // Exemplo: alinha à direita
-      }
-    ];
+    const bg = document.getElementById('bg1');
+    const select = document.getElementById('select-img');
+    const rangeY = document.getElementById('range-y');
+    const rangeX = document.getElementById('range-x');
+    const valY = document.getElementById('val-y');
+    const valX = document.getElementById('val-x');
 
-    let indiceAtual = 0;
-    let camadaAtiva = 1;
-
-    const bg1 = document.getElementById('bg1');
-    const bg2 = document.getElementById('bg2');
-
-    // Carrega a primeira imagem IMEDIATAMENTE (com sua posição)
-    function configurarImagem(camada, config) {
-      camada.style.backgroundImage = `url('${config.src}')`;
-      camada.style.backgroundPosition = config.position;
+    function carregarImagemTeste() {
+      bg.style.backgroundImage = `url('${select.value}')`;
+      atualizarPosicao();
     }
 
-    configurarImagem(bg1, imagensConfig[0]);
-
-    function trocarFundoSuave() {
-      indiceAtual = (indiceAtual + 1) % imagensConfig.length;
-      const configProxima = imagensConfig[indiceAtual];
-
-      if (camadaAtiva === 1) {
-        configurarImagem(bg2, configProxima);
-        bg2.classList.add('active');
-        bg1.classList.remove('active');
-        camadaAtiva = 2;
-      } else {
-        configurarImagem(bg1, configProxima);
-        bg1.classList.add('active');
-        bg2.classList.remove('active');
-        camadaAtiva = 1;
-      }
+    function atualizarPosicao() {
+      const pos = `${rangeX.value}% ${rangeY.value}%`;
+      bg.style.backgroundPosition = pos;
+      valX.innerText = `${rangeX.value}%`;
+      valY.innerText = `${rangeY.value}%`;
     }
 
-    // Troca de imagem a cada 3.5 segundos (3500ms)
-    setInterval(trocarFundoSuave, 3500);
+    function copiarCodigo() {
+      const texto = `{ src: '${select.value}', position: '${rangeX.value}% ${rangeY.value}%' }`;
+      navigator.clipboard.writeText(texto);
+      alert(`Copiado para a área de transferência:\n${texto}`);
+    }
+
+    // Inicializa com a primeira imagem
+    carregarImagemTeste();
   </script>
 
 </body>
