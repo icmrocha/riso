@@ -1,28 +1,36 @@
 <!DOCTYPE html>
 <html lang="pt-BR">
 <head>
-<link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png">
-<link rel="icon" type="image/png" sizes="32x32" href="/favicon-32x32.png">
-<link rel="icon" type="image/png" sizes="16x16" href="/favicon-16x16.png">
-<link rel="manifest" href="/site.webmanifest">
+  <link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png">
+  <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32x32.png">
+  <link rel="icon" type="image/png" sizes="16x16" href="/favicon-16x16.png">
+  <link rel="manifest" href="/site.webmanifest">
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>RISO</title>
   <style>
-    body {
+    * {
+      box-sizing: border-box;
       margin: 0;
-      padding: 40px 20px;
-      background-color: #fffaf5;
-      color: #3b2f2f;
+      padding: 0;
+    }
+
+    body {
+      height: 100vh;
+      width: 100vw;
       font-family: 'Helvetica Neue', sans-serif;
       display: flex;
       flex-direction: column;
       justify-content: space-between;
       align-items: center;
-      height: 80vh;
-      text-align: center;
-      box-sizing: border-box;
-      gap: 20px;
+      padding: 40px 20px;
+      overflow: hidden;
+      
+      /* Configuração do fundo */
+      background-image: url('agora-borogodo-riso_websize.jpg');
+      background-size: cover;
+      background-position: center;
+      background-repeat: no-repeat;
     }
 
     .fade-in {
@@ -36,31 +44,27 @@
       }
     }
 
-    img {
-      max-width: 400px;
-      width: 60%;
-    }
-
-    h1 {
-      font-size: 1.5rem;
-      font-weight: 400;
-      margin: 0;
-      padding: 0 20px;
-    }
-
-    @media (min-width: 600px) {
-      h1 {
-        font-size: 2rem;
-      }
+    /* Título principal centralizado */
+    h1.title {
+      font-size: 8rem;
+      font-weight: 300;
+      color: #ffffff;
+      letter-spacing: 2px;
+      margin: auto 0;
+      text-transform: uppercase;
     }
 
     footer {
       font-size: 0.9rem;
-      color: #6e5c5c;
+      color: #ffffff;
+      background-color: rgba(0, 0, 0, 0.2);
+      padding: 8px 16px;
+      border-radius: 20px;
+      backdrop-filter: blur(4px);
     }
 
     footer a {
-      color: #6e5c5c;
+      color: #ffffff;
       text-decoration: none;
       margin: 0 10px;
     }
@@ -68,15 +72,26 @@
     footer a:hover {
       text-decoration: underline;
     }
+
+    /* Ajuste para telas menores (Celulares) */
+    @media (max-width: 600px) {
+      h1.title {
+        font-size: 4rem;
+      }
+    }
   </style>
 </head>
 <body>
-  <img src="logo-riso.png" alt="Logotipo do RISO" class="fade-in" />
- <!-- <h1 class="fade-in" style="animation-delay: 0.5s;">Vem aí...</h1>  -->
+
+  <!-- Título RISO estilo marca d'água/hero -->
+  <h1 class="title fade-in">RISO</h1>
+
+  <!-- Rodapé com os links -->
   <footer class="fade-in" style="animation-delay: 0.5s;">
     <a href="https://instagram.com/casa.riso" target="_blank">Instagram</a> |
     <a href="https://wa.me/5524992438242" target="_blank">Reservas</a> |
     <a href="cardapio.pdf" target="_blank">Cardápio</a>
   </footer>
+
 </body>
 </html>
