@@ -24,8 +24,8 @@
       align-items: center;
       overflow: hidden;
       
-      /* Fundo original sem desfoque */
-      background-image: url('agora-borogodo-riso_websize.jpg');
+      /* Transição suave ao trocar a imagem */
+      transition: background-image 1s ease-in-out;
       background-size: cover;
       background-position: center;
       background-repeat: no-repeat;
@@ -42,15 +42,15 @@
       }
     }
 
-    /* Container de links maior e centralizado */
+    /* Container de links centralizado */
     .links-container {
-      font-size: 1.25rem; /* Aumentado o tamanho da fonte */
+      font-size: 1.25rem;
       font-weight: 500;
       color: #ffffff;
-      background-color: rgba(0, 0, 0, 0.35); /* Leve fundo escuro para garantir leitura */
+      background-color: rgba(0, 0, 0, 0.35);
       padding: 14px 28px;
       border-radius: 30px;
-      backdrop-filter: blur(4px); /* Suave desfoque apenas no balão dos links */
+      backdrop-filter: blur(4px);
     }
 
     .links-container a {
@@ -65,7 +65,6 @@
       text-decoration: underline;
     }
 
-    /* Ajuste para telas pequenas (celulares) */
     @media (max-width: 600px) {
       .links-container {
         font-size: 1rem;
@@ -84,6 +83,37 @@
     <a href="https://wa.me/5524992438242" target="_blank">Reservas</a> |
     <a href="cardapio.pdf" target="_blank">Cardápio</a>
   </div>
+
+  <script>
+    // Lista com os nomes dos seus arquivos de imagem
+    const imagens = [
+      'agora-borogodo-riso_websize.jpg',
+      'RISO-thewonder-13_websize.jpg',
+      'RISO-thewonder-40_websize.jpg',
+      'RISO-thewonder-57_websize.jpg',
+      'RISO-thewonder-131_websize.jpg',
+      'RISO-thewonder-109_websize.jpg'
+
+
+      
+    ];
+
+    let indiceAtual = 0;
+
+    function trocarFundo() {
+      // Atualiza a imagem de fundo do body
+      document.body.style.backgroundImage = `url('${imagens[indiceAtual]}')`;
+      
+      // Avança para a próxima imagem ou volta para a primeira
+      indiceAtual = (indiceAtual + 1) % imagens.length;
+    }
+
+    // Carrega a primeira imagem imediatamente ao abrir
+    trocarFundo();
+
+    // Define o tempo de troca em milissegundos (5000ms = 5 segundos)
+    setInterval(trocarFundo, 5000);
+  </script>
 
 </body>
 </html>
