@@ -57,93 +57,37 @@
       }
     }
 
-    /* Container de links centralizado */
+       /* Container de links centralizado */
     .links-container {
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      gap: 16px;
-      width: 90%;
-      max-width: 380px;
-      padding: 24px 20px;
-      background-color: rgba(0, 0, 0, 0.45);
-      border-radius: 24px;
-      backdrop-filter: blur(8px);
-      -webkit-backdrop-filter: blur(8px);
-      box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
-      z-index: 10;
-      border: 1px solid rgba(255, 255, 255, 0.15);
-    }
-
-    /* BOTÃO PRINCIPAL DE RESERVAS (DESTAQUE VISUAL) */
-    .btn-main-reserva {
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      justify-content: center;
-      width: 100%;
-      padding: 14px 20px;
-      background-color: #2563eb;
-      color: #ffffff;
-      text-decoration: none;
-      border-radius: 16px;
-      box-shadow: 0 4px 14px rgba(37, 99, 235, 0.4);
-      transition: all 0.2s ease-in-out;
-    }
-
-    .btn-main-reserva:hover, .btn-main-reserva:active {
-      background-color: #1d4ed8;
-      transform: translateY(-2px);
-      box-shadow: 0 6px 18px rgba(37, 99, 235, 0.5);
-    }
-
-    .btn-main-reserva .title {
-      font-size: 1.2rem;
-      font-weight: 800;
-      letter-spacing: 0.3px;
-    }
-
-    .btn-main-reserva .subtitle {
-      font-size: 0.78rem;
-      font-weight: 400;
-      opacity: 0.9;
-      margin-top: 2px;
-    }
-
-    /* BOTÕES SECUNDÁRIOS HARMONIZADOS (INSTAGRAM E CARDÁPIO) */
-    .secondary-links {
-      display: flex;
-      justify-content: center;
-      align-items: center;
-      gap: 12px;
-      width: 100%;
-    }
-
-    .btn-secondary {
-      flex: 1;
-      text-align: center;
-      padding: 10px 14px;
-      color: #ffffff;
-      text-decoration: none;
-      font-size: 0.95rem;
+      font-size: 1.25rem;
       font-weight: 500;
-      background: rgba(255, 255, 255, 0.12);
-      border: 1px solid rgba(255, 255, 255, 0.2);
-      border-radius: 12px;
-      transition: all 0.2s ease;
+      color: #ffffff;
+      background-color: rgba(0, 0, 0, 0.35);
+      padding: 14px 28px;
+      border-radius: 30px;
+      backdrop-filter: blur(4px);
+      z-index: 10;
     }
 
-    .btn-secondary:hover {
-      background: rgba(255, 255, 255, 0.25);
-      border-color: rgba(255, 255, 255, 0.4);
+    .links-container a {
+      color: #ffffff;
+      text-decoration: none;
+      margin: 0 12px;
+      transition: opacity 0.2s ease;
     }
 
-    @media (max-width: 480px) {
+    .links-container a:hover {
+      opacity: 0.8;
+      text-decoration: underline;
+    }
+
+    @media (max-width: 600px) {
       .links-container {
-        padding: 20px 16px;
+        font-size: 1rem;
+        padding: 10px 18px;
       }
-      .btn-main-reserva .title {
-        font-size: 1.1rem;
+      .links-container a {
+        margin: 0 6px;
       }
     }
   </style>
@@ -154,22 +98,15 @@
   <div id="bg1" class="bg-layer active"></div>
   <div id="bg2" class="bg-layer"></div>
 
-  <!-- Container de Links Centralizado -->
+  
+
+  <!-- Links do site -->
   <div class="links-container fade-in">
-    
-    <!-- Novo Botão Principal de Reserva (Destaque Visual) -->
-    <a href="https://riso.art.br/res_index.html" class="btn-main-reserva">
-      <span class="title">Faça Sua Reserva</span>
-      <span class="subtitle">de maneira prática online</span>
-    </a>
-
-    <!-- Botões Secundários Reorganizados -->
-    <div class="secondary-links">
-      <a href="https://instagram.com/casa.riso" target="_blank" class="btn-secondary">Instagram</a>
-      <a href="cardapio.pdf" target="_blank" class="btn-secondary">Cardápio</a>
-    </div>
-
+    <a href="https://instagram.com/casa.riso" target="_blank">Instagram</a> |
+    <a href="https://wa.me/5524992438242" target="_blank">Reservas</a> |
+    <a href="cardapio.pdf" target="_blank">Cardápio</a>
   </div>
+
 
   <script>
     // Configurações de enquadramento e zoom aprovadas
