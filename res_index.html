@@ -5,6 +5,9 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Reservas - Riso</title>
   
+  <!-- Biblioteca para gerar imagem do comprovante (Print) -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+
   <!-- ESTILOS CSS DA PÁGINA DE RESERVAS -->
   <style>
     :root {
@@ -52,7 +55,6 @@
       margin-bottom: 20px;
     }
 
-    /* ALTERADO: Nova classe para o card de regras logo abaixo do formulário */
     .rules-section {
       background: var(--card-bg);
       padding: 20px;
@@ -205,8 +207,7 @@
     .btn-submit {
       width: 100%;
       padding: 14px;
-      /* ALTERADO: Cor do botão foi definida como o verde da classe btn-whatsapp */
-      background-color: #25d366;
+      background-color: #25d366; /* Botão verde padrão whatsapp */
       color: white;
       border: none;
       border-radius: 8px;
@@ -229,6 +230,13 @@
       box-shadow: 0 4px 6px rgba(0,0,0,0.05);
       border-top: 6px solid var(--success);
       display: none;
+    }
+
+    /* Envoltório para gerar imagem sem os botões */
+    #voucherPrintArea {
+      background: var(--card-bg);
+      padding: 10px;
+      border-radius: 8px;
     }
 
     .voucher-title {
@@ -258,6 +266,45 @@
       font-size: 0.85rem;
       margin-top: 14px;
       line-height: 1.6;
+    }
+
+    /* NOVOS BOTÕES DE AÇÃO DO VOUCHER */
+    .voucher-actions {
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+      margin-top: 24px;
+    }
+
+    .btn-action {
+      width: 100%;
+      padding: 12px;
+      border: 1px solid var(--border);
+      background-color: var(--card-bg);
+      border-radius: 8px;
+      font-size: 0.95rem;
+      font-weight: 600;
+      color: var(--text);
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      transition: all 0.2s ease;
+    }
+
+    .btn-action:hover {
+      background-color: var(--disabled-bg);
+    }
+
+    .btn-action.primary {
+      background-color: #25d366;
+      color: white;
+      border: none;
+    }
+
+    .btn-action.primary:hover {
+      background-color: #1ebc5a;
     }
 
     .loading-overlay {
@@ -338,14 +385,12 @@
         <textarea id="especialObs" rows="4" placeholder="• Sua reserva celebra alguma ocasião especial?&#10;• Possui alguma alergia, intolerância ou algo que não consuma de jeito nenhum?&#10;• A reserva inclui crianças?"></textarea>
       </div>
 
-      <!-- ALTERADO: Botão já possui a nova formatação puxando a cor alterada do CSS -->
       <button type="submit" class="btn-submit" id="btnSubmit" disabled>Reservar</button>
-      
       <div class="loading-overlay" id="loadingSubmit">Processando a sua reserva...</div>
     </form>
   </div>
-
-  <!-- ALTERADO: NOVA SEÇÃO ISOLADA PARA AS REGRAS LOGO ABAIXO DO FORMULÁRIO -->
+  
+  <!-- SEÇÃO ISOLADA PARA AS REGRAS ABAIXO DO FORMULÁRIO -->
   <div class="rules-section" id="rulesSection">
     <ul class="bullets-list">
       <li>Em caso de chuva, sua reserva pode sofrer alterações</li>
@@ -360,17 +405,32 @@
 
   <!-- SEÇÃO DO COMPROVANTE DIGITAL -->
   <div class="voucher-card" id="voucherCard">
-    <div class="voucher-title">✓ Reserva Confirmada!</div>
-    <div>Apresente este código ou informe seu nome na chegada:</div>
-    <div class="voucher-code" id="resCodigo">#RISO-XXXX</div>
+    
+    <!-- ENVOLTÓRIO DA ÁREA DE PRINT PARA O COMPROVANTE (Tira os botões da imagem) -->
+    <div id="voucherPrintArea">
+      <div class="voucher-title">✓ Reserva Confirmada!</div>
+      <div>Apresente este código ou informe seu nome na chegada:</div>
+      <div class="voucher-code" id="resCodigo">#RISO-XXXX</div>
 
-    <div class="voucher-details">
-      <div><strong>Nome:</strong> <span id="resNome"></span></div>
-      <div><strong>Data:</strong> <span id="resData"></span></div>
-      <div><strong>Horário:</strong> <span id="resHorario"></span></div>
-      <div><strong>Pessoas:</strong> <span id="resPessoas"></span></div>
-      <div><strong>Observações:</strong> <span id="resObs"></span></div>
+      <div class="voucher-details">
+        <div><strong>Nome:</strong> <span id="resNome"></span></div>
+        <div><strong>Data:</strong> <span id="resData"></span></div>
+        <div><strong>Horário:</strong> <span id="resHorario"></span></div>
+        <div><strong>Pessoas:</strong> <span id="resPessoas"></span></div>
+        <div><strong>Observações:</strong> <span id="resObs"></span></div>
+      </div>
     </div>
+    
+    <!-- BOTÕES DE AÇÃO DO COMPROVANTE -->
+    <div class="voucher-actions">
+      <button type="button" class="btn-action primary" onclick="baixarComprovanteImagem()">
+        📸 Salvar no celular (Imagem)
+      </button>
+      <button type="button" class="btn-action" onclick="baixarICS()">
+        📅 Salvar no Google Calendar / iCal
+      </button>
+    </div>
+
   </div>
 
   <script>
@@ -384,7 +444,6 @@
     const hoje = new Date().toISOString().split("T")[0];
     inputData.min = hoje;
 
-    // Inicialização: carrega a lista de datas liberadas assim que abre a página
     carregarDatasLiberadas();
 
     async function carregarDatasLiberadas() {
@@ -426,11 +485,9 @@
       document.getElementById("btnSubmit").disabled = true;
       helper.style.display = "none";
 
-      // Converte YYYY-MM-DD para DD/MM/YYYY para comparar com o conjunto do servidor
       const partes = dataVal.split("-");
       const dataPtBr = `${partes[2]}/${partes[1]}/${partes[0]}`;
 
-      // VALIDAÇÃO DE DATA LIBERADA
       if (!datasLiberadasSet.has(dataPtBr)) {
         selectPessoas.disabled = true;
         selectPessoas.value = "";
@@ -438,10 +495,8 @@
         return;
       }
 
-      // Se a data estiver liberada, habilita o campo de pessoas
       selectPessoas.disabled = false;
       selectPessoas.value = "";
-
       slotsContainer.innerHTML = `<div class="helper-text" style="grid-column: span 3; font-weight: 500;">Para ver os horários disponíveis, indique a quantidade de pessoas.</div>`;
     }
 
@@ -475,7 +530,6 @@
         loading.style.display = "none";
 
         if (result.status === "success") {
-          // Dupla checagem enviada pelo servidor
           if (result.dataLiberada === false) {
             slotsContainer.innerHTML = `<div class="helper-text" style="color:#ef4444; grid-column: span 3; font-weight: 600;">⚠️ Esta data não possui atendimento ou não está liberada para reservas.</div>`;
             document.getElementById("pessoas").disabled = true;
@@ -585,11 +639,8 @@
         loadingSubmit.style.display = "none";
 
         if (result.status === "success") {
-          // Oculta todos os formulários e avisos para evidenciar apenas o Voucher
           document.getElementById("introSection").style.display = "none";
           document.getElementById("formContainer").style.display = "none";
-          
-          // ALTERADO: Oculta a nova seção de regras quando a reserva tem sucesso
           document.getElementById("rulesSection").style.display = "none";
 
           const p = payload.dataReserva.split("-");
@@ -612,6 +663,57 @@
         alert("Erro de conexão com o servidor. Tente novamente.");
         btnSubmit.disabled = false;
       }
+    }
+
+    // NOVA FUNÇÃO: Gera Imagem/Print HTML com a Biblioteca html2canvas
+    function baixarComprovanteImagem() {
+      const area = document.getElementById("voucherPrintArea");
+      html2canvas(area, { backgroundColor: "#ffffff", scale: 2 }).then(canvas => {
+        const link = document.createElement("a");
+        link.download = "Reserva_Riso.png";
+        link.href = canvas.toDataURL("image/png");
+        link.click();
+      });
+    }
+
+    // NOVA FUNÇÃO: Gera Evento de Calendário .ics Universamente Aceito (Apple e Google)
+    function baixarICS() {
+      const nome = document.getElementById("resNome").innerText;
+      const dataBr = document.getElementById("resData").innerText; // DD/MM/YYYY
+      const horario = document.getElementById("resHorario").innerText; // HH:mm
+      const codigo = document.getElementById("resCodigo").innerText;
+      const pessoas = document.getElementById("resPessoas").innerText;
+
+      // Tratamento de Data para o formato ICS YYYYMMDDTHHMMSS
+      const partes = dataBr.split('/');
+      const YYYY = partes[2];
+      const MM = partes[1];
+      const DD = partes[0];
+      const startTimeStr = YYYY + MM + DD + "T" + horario.replace(":", "") + "00";
+
+      // Adiciona 2h de duração base para criar o Fim do evento
+      const endHour = String(parseInt(horario.split(':')[0]) + 2).padStart(2, '0');
+      const endTimeStr = YYYY + MM + DD + "T" + endHour + horario.split(':')[1] + "00";
+
+      // Conteúdo estruturado do arquivo iCalendar
+      const icsContent = 
+`BEGIN:VCALENDAR
+VERSION:2.0
+PRODID:-//Riso Bistro//Reservas//PT
+BEGIN:VEVENT
+SUMMARY:Reserva Riso - ${nome}
+DTSTART:${startTimeStr}
+DTEND:${endTimeStr}
+LOCATION:Casa Riso Bistro
+DESCRIPTION:Sua reserva está confirmada!\\n\\nCódigo: ${codigo}\\nQuantidade: ${pessoas} pessoa(s)
+END:VEVENT
+END:VCALENDAR`;
+
+      const blob = new Blob([icsContent], { type: 'text/calendar;charset=utf-8' });
+      const link = document.createElement('a');
+      link.href = window.URL.createObjectURL(blob);
+      link.download = 'Reserva_Riso.ics';
+      link.click();
     }
   </script>
 </body>
