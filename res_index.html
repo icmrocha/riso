@@ -270,36 +270,19 @@
   <div class="intro-section" id="introSection">
     <h1>Que bom ter você por aqui!</h1>
     <div class="intro-text">
-      Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed do eiusmod tempor incididunt ut labore et dolore magna aliqua.
+      A Casa Riso é um espaço acolhedor e intimista, com poucos lugares, por isso, para garantir a melhor experiência, <b>faça sua reserva de forma prática online.</b>
     </div>
 
     <ul class="bullets-list">
       <li>Utilize o formulário abaixo para realizar sua reserva</li>
       <li>Funcionamos aos Sábados e Domingos, de meio-dia às 17h</li>
-      <li>Em caso de chuva, sua reserva pode sofrer alterações</li>
-      <li>Em caso de desistência da reserva, pedimos a gentileza de cancelar com até 24h de antecedência via Whatsapp</li>
-      <li>
-        Para reservas acima de 8 pessoas, eventos ou dias fora do horário normal de atendimento, entrar em contato via Whatsapp
-        <br>
-        <a href="https://wa.me/5524992438242" target="_blank" class="btn-whatsapp">Falar no WhatsApp</a>
-      </li>
     </ul>
   </div>
 
   <!-- SEÇÃO DO FORMULÁRIO -->
   <div class="form-container" id="formContainer">
     <form id="reservationForm" onsubmit="submitReservation(event)">
-      
-      <div class="form-group">
-        <label for="nome">Nome:</label>
-        <input type="text" id="nome" required placeholder="Seu nome completo">
-      </div>
-
-      <div class="form-group">
-        <label for="telefone">Telefone:</label>
-        <input type="tel" id="telefone" required placeholder="(24) 99999-9999" maxlength="15" oninput="mascaraTelefone(this)">
-      </div>
-
+    
       <div class="form-group">
         <label for="dataReserva">Dia da Reserva:</label>
         <input type="date" id="dataReserva" required onchange="aoSelecionarData()">
@@ -329,12 +312,34 @@
         <div class="helper-text" id="slotsHelper" style="display: none; font-weight: 500;"></div>
       </div>
 
+       <div class="form-group">
+        <label for="nome">Nome:</label>
+        <input type="text" id="nome" required placeholder="Seu nome completo">
+      </div>
+
+      <div class="form-group">
+        <label for="telefone">Telefone:</label>
+        <input type="tel" id="telefone" required placeholder="(24) 99999-9999" maxlength="15" oninput="mascaraTelefone(this)">
+      </div>
+
+
       <div class="form-group">
         <label for="especialObs">Precisa de algo especial? Nos conte aqui! (opcional)</label>
         <textarea id="especialObs" rows="4" placeholder="• Sua reserva celebra alguma ocasião especial?&#10;• Possui alguma alergia, intolerância ou algo que não consuma de jeito nenhum?&#10;• A reserva inclui crianças?"></textarea>
       </div>
 
       <button type="submit" class="btn-submit" id="btnSubmit" disabled>Reservar</button>
+
+       <ul class="bullets-list">
+      <li>Em caso de chuva, sua reserva pode sofrer alterações</li>
+      <li>Em caso de desistência da reserva, pedimos a gentileza de cancelar com até 24h de antecedência via Whatsapp</li>
+      <li>
+        Para reservas acima de 8 pessoas, eventos ou dias fora do horário normal de atendimento, entrar em contato via Whatsapp
+        <br>
+        <a href="https://wa.me/5524992438242" target="_blank" class="btn-whatsapp">Falar no WhatsApp</a>
+      </li>
+    </ul>
+
       <div class="loading-overlay" id="loadingSubmit">Processando a sua reserva...</div>
     </form>
   </div>
