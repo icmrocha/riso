@@ -52,6 +52,15 @@
       margin-bottom: 20px;
     }
 
+    /* ALTERADO: Nova classe para o card de regras logo abaixo do formulário */
+    .rules-section {
+      background: var(--card-bg);
+      padding: 20px;
+      border-radius: 12px;
+      box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+      margin-top: 20px;
+    }
+
     h1 {
       font-size: 1.3rem;
       margin: 0 0 10px 0;
@@ -196,7 +205,8 @@
     .btn-submit {
       width: 100%;
       padding: 14px;
-      background-color: var(--primary);
+      /* ALTERADO: Cor do botão foi definida como o verde da classe btn-whatsapp */
+      background-color: #25d366;
       color: white;
       border: none;
       border-radius: 8px;
@@ -282,7 +292,7 @@
   <!-- SEÇÃO DO FORMULÁRIO -->
   <div class="form-container" id="formContainer">
     <form id="reservationForm" onsubmit="submitReservation(event)">
-    
+      
       <div class="form-group">
         <label for="dataReserva">Dia da Reserva:</label>
         <input type="date" id="dataReserva" required onchange="aoSelecionarData()">
@@ -328,9 +338,16 @@
         <textarea id="especialObs" rows="4" placeholder="• Sua reserva celebra alguma ocasião especial?&#10;• Possui alguma alergia, intolerância ou algo que não consuma de jeito nenhum?&#10;• A reserva inclui crianças?"></textarea>
       </div>
 
+      <!-- ALTERADO: Botão já possui a nova formatação puxando a cor alterada do CSS -->
       <button type="submit" class="btn-submit" id="btnSubmit" disabled>Reservar</button>
-        <br>
-       <ul class="bullets-list">
+      
+      <div class="loading-overlay" id="loadingSubmit">Processando a sua reserva...</div>
+    </form>
+  </div>
+
+  <!-- ALTERADO: NOVA SEÇÃO ISOLADA PARA AS REGRAS LOGO ABAIXO DO FORMULÁRIO -->
+  <div class="rules-section" id="rulesSection">
+    <ul class="bullets-list">
       <li>Em caso de chuva, sua reserva pode sofrer alterações</li>
       <li>Em caso de desistência da reserva, pedimos a gentileza de cancelar com até 24h de antecedência via Whatsapp</li>
       <li>
@@ -339,9 +356,6 @@
         <a href="https://wa.me/5524992438242" target="_blank" class="btn-whatsapp">Falar no WhatsApp</a>
       </li>
     </ul>
-
-      <div class="loading-overlay" id="loadingSubmit">Processando a sua reserva...</div>
-    </form>
   </div>
 
   <!-- SEÇÃO DO COMPROVANTE DIGITAL -->
@@ -571,8 +585,12 @@
         loadingSubmit.style.display = "none";
 
         if (result.status === "success") {
+          // Oculta todos os formulários e avisos para evidenciar apenas o Voucher
           document.getElementById("introSection").style.display = "none";
           document.getElementById("formContainer").style.display = "none";
+          
+          // ALTERADO: Oculta a nova seção de regras quando a reserva tem sucesso
+          document.getElementById("rulesSection").style.display = "none";
 
           const p = payload.dataReserva.split("-");
           const dataExibicao = `${p[2]}/${p[1]}/${p[0]}`;
