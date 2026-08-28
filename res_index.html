@@ -191,7 +191,7 @@
       color: var(--disabled-text);
       border-color: #e2e8f0;
       cursor: not-allowed;
-      opacity: 0.5;
+      opacity: 0.55;
     }
 
     .slot-btn.disabled .slot-subtext {
@@ -222,21 +222,23 @@
       cursor: not-allowed;
     }
 
+    /* ALTERADO: Removemos o padding interno daqui e movemos para a print area */
     .voucher-card {
       background: var(--card-bg);
       border-radius: 12px;
-      padding: 24px;
       text-align: center;
       box-shadow: 0 4px 6px rgba(0,0,0,0.05);
       border-top: 6px solid var(--success);
       display: none;
+      overflow: hidden;
     }
 
-    /* Envoltório para gerar imagem sem os botões */
+    /* ALTERADO: Area específica que será capturada na imagem */
     #voucherPrintArea {
       background: var(--card-bg);
-      padding: 10px;
-      border-radius: 8px;
+      padding: 30px 24px; /* Margin de respiro inserido aqui */
+      /* Força uma fonte genérica e segura para impedir o html2canvas de "esmagar" espaços */
+      font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif; 
     }
 
     .voucher-title {
@@ -268,12 +270,12 @@
       line-height: 1.6;
     }
 
-    /* NOVOS BOTÕES DE AÇÃO DO VOUCHER */
+    /* ALTERADO: Área dos botões ajustada para acomodar o novo design de espaçamento */
     .voucher-actions {
       display: flex;
       flex-direction: column;
       gap: 12px;
-      margin-top: 24px;
+      padding: 0 24px 24px 24px; 
     }
 
     .btn-action {
@@ -318,7 +320,7 @@
 </head>
 <body>
 
-  <!-- TOPO: LOGOTIPO DO RESTAURANTE --> 
+  <!-- TOPO: LOGOTIPO DO RESTAURANTE -->
   <div class="header-logo">
     <img src="../logo.png" alt="Logo RISO" class="logo">
   </div>
@@ -342,12 +344,12 @@
       
       <div class="form-group">
         <label for="dataReserva">Dia da Reserva:</label>
-        <input type="date" id="dataReserva" required onchange="aoSelecionarData()">
+        <input type="date" id="dataReserva" required onchange="consultarDisponibilidade()">
       </div>
 
       <div class="form-group">
         <label for="pessoas">Quantidade de pessoas na reserva:</label>
-        <select id="pessoas" required disabled onchange="aoSelecionarPessoas()">
+        <select id="pessoas" required disabled onchange="atualizarLotacaoSlots()">
           <option value="" disabled selected>Selecione a quantidade de pessoas</option>
           <option value="1">1 pessoa</option>
           <option value="2">2 pessoas</option>
@@ -378,7 +380,6 @@
         <label for="telefone">Telefone:</label>
         <input type="tel" id="telefone" required placeholder="(24) 99999-9999" maxlength="15" oninput="mascaraTelefone(this)">
       </div>
-
 
       <div class="form-group">
         <label for="especialObs">Precisa de algo especial? Nos conte aqui! (opcional)</label>
@@ -472,23 +473,27 @@
       input.value = v;
     }
 
-    function aoSelecionarData() {
+    async function consultarDisponibilidade() {
       const dataVal = inputData.value;
-      const selectPessoas = document.getElementById("pessoas");
       const slotsContainer = document.getElementById("slotsContainer");
+      const loading = document.getElementById("loadingSlots");
       const helper = document.getElementById("slotsHelper");
+      const selectPessoas = document.getElementById("pessoas");
 
       if (!dataVal) return;
 
-      vagasDoDia = null;
+      slotsContainer.innerHTML = "";
+      helper.style.display = "none";
+      loading.style.display = "block";
       selectedHorario = null;
       document.getElementById("btnSubmit").disabled = true;
-      helper.style.display = "none";
 
+      // Validação das Datas Liberadas
       const partes = dataVal.split("-");
       const dataPtBr = `${partes[2]}/${partes[1]}/${partes[0]}`;
 
       if (!datasLiberadasSet.has(dataPtBr)) {
+        loading.style.display = "none";
         selectPessoas.disabled = true;
         selectPessoas.value = "";
         slotsContainer.innerHTML = `<div class="helper-text" style="color:#ef4444; grid-column: span 3; font-weight: 600;">⚠️ Esta data não possui atendimento ou não está liberada para reservas. Por favor, escolha outro dia.</div>`;
@@ -497,31 +502,6 @@
 
       selectPessoas.disabled = false;
       selectPessoas.value = "";
-      slotsContainer.innerHTML = `<div class="helper-text" style="grid-column: span 3; font-weight: 500;">Para ver os horários disponíveis, indique a quantidade de pessoas.</div>`;
-    }
-
-    async function aoSelecionarPessoas() {
-      const dataVal = inputData.value;
-      const numPessoasVal = document.getElementById("pessoas").value;
-
-      if (!dataVal || !numPessoasVal) return;
-
-      if (vagasDoDia) {
-        renderizarSlots();
-        return;
-      }
-
-      await consultarDisponibilidadeServidor(dataVal);
-    }
-
-    async function consultarDisponibilidadeServidor(dataVal) {
-      const slotsContainer = document.getElementById("slotsContainer");
-      const loading = document.getElementById("loadingSlots");
-      const helper = document.getElementById("slotsHelper");
-
-      slotsContainer.innerHTML = "";
-      helper.style.display = "none";
-      loading.style.display = "block";
 
       try {
         const response = await fetch(`${API_URL}?data=${dataVal}`);
@@ -530,14 +510,8 @@
         loading.style.display = "none";
 
         if (result.status === "success") {
-          if (result.dataLiberada === false) {
-            slotsContainer.innerHTML = `<div class="helper-text" style="color:#ef4444; grid-column: span 3; font-weight: 600;">⚠️ Esta data não possui atendimento ou não está liberada para reservas.</div>`;
-            document.getElementById("pessoas").disabled = true;
-            return;
-          }
-
           vagasDoDia = result.disponibilidade;
-          renderizarSlots();
+          slotsContainer.innerHTML = `<div class="helper-text" style="grid-column: span 3;">Aguardando você selecionar a quantidade de pessoas acima...</div>`;
         } else {
           slotsContainer.innerHTML = `<div class="helper-text" style="color:#ef4444; grid-column: span 3;">Erro ao carregar horários. Tente novamente.</div>`;
         }
@@ -547,7 +521,7 @@
       }
     }
 
-    function renderizarSlots() {
+    function atualizarLotacaoSlots() {
       if (!vagasDoDia) return;
 
       const numPessoasVal = document.getElementById("pessoas").value;
@@ -555,7 +529,7 @@
       const helper = document.getElementById("slotsHelper");
 
       if (!numPessoasVal) {
-        slotsContainer.innerHTML = `<div class="helper-text" style="grid-column: span 3; font-weight: 500;">Para ver os horários disponíveis, indique a quantidade de pessoas.</div>`;
+        slotsContainer.innerHTML = `<div class="helper-text" style="grid-column: span 3;">Selecione a quantidade de pessoas acima.</div>`;
         helper.style.display = "none";
         return;
       }
@@ -576,7 +550,7 @@
 
         if (!comportaPessoas || info.esmaecer) {
           btn.className = "slot-btn disabled";
-          let subtexto = info.disponiveis <= 0 ? "Esgotado" : `Resta(m) ${info.disponiveis} vaga(s)`;
+          let subtexto = info.disponiveis <= 0 ? "Esgotado" : `Sem vaga p/ ${numPessoas}p`;
           btn.innerHTML = `<span>${horario}</span><span class="slot-subtext">${subtexto}</span>`;
           btn.disabled = true;
         } else {
@@ -592,10 +566,10 @@
       helper.style.display = "block";
       if (peloMenosUmDisponivel) {
         helper.style.color = "var(--primary)";
-        helper.innerText = `Mostrando horários com vagas disponíveis para ${numPessoas} pessoa(s).`;
+        helper.innerText = `Mostrando apenas horários que possuem vagas disponíveis para ${numPessoas} pessoas.`;
       } else {
         helper.style.color = "#ef4444";
-        helper.innerText = `⚠️ Nenhum horário possui ${numPessoas} vagas disponíveis nesta data. Tente alterar a quantidade de pessoas ou a data.`;
+        helper.innerText = `⚠️ Nenhum horário possui vagas suficientes para ${numPessoas} pessoas nesta data. Tente alterar a quantidade ou a data.`;
       }
     }
 
@@ -665,7 +639,7 @@
       }
     }
 
-    // NOVA FUNÇÃO: Gera Imagem/Print HTML com a Biblioteca html2canvas
+    // Gerar a imagem com html2canvas
     function baixarComprovanteImagem() {
       const area = document.getElementById("voucherPrintArea");
       html2canvas(area, { backgroundColor: "#ffffff", scale: 2 }).then(canvas => {
@@ -676,26 +650,23 @@
       });
     }
 
-    // NOVA FUNÇÃO: Gera Evento de Calendário .ics Universamente Aceito (Apple e Google)
+    // Gerar o Evento de Calendário iCal
     function baixarICS() {
       const nome = document.getElementById("resNome").innerText;
-      const dataBr = document.getElementById("resData").innerText; // DD/MM/YYYY
-      const horario = document.getElementById("resHorario").innerText; // HH:mm
+      const dataBr = document.getElementById("resData").innerText; 
+      const horario = document.getElementById("resHorario").innerText; 
       const codigo = document.getElementById("resCodigo").innerText;
       const pessoas = document.getElementById("resPessoas").innerText;
 
-      // Tratamento de Data para o formato ICS YYYYMMDDTHHMMSS
       const partes = dataBr.split('/');
       const YYYY = partes[2];
       const MM = partes[1];
       const DD = partes[0];
       const startTimeStr = YYYY + MM + DD + "T" + horario.replace(":", "") + "00";
 
-      // Adiciona 2h de duração base para criar o Fim do evento
       const endHour = String(parseInt(horario.split(':')[0]) + 2).padStart(2, '0');
       const endTimeStr = YYYY + MM + DD + "T" + endHour + horario.split(':')[1] + "00";
 
-      // Conteúdo estruturado do arquivo iCalendar
       const icsContent = 
 `BEGIN:VCALENDAR
 VERSION:2.0
