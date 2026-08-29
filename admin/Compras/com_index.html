@@ -464,11 +464,16 @@
 
       // Manipulação direta de classe CSS no DOM para performance (sem reconstrução inteira do componente)
       const inputEl = document.getElementById(`qty-${slugify(itemName)}`);
-      if (inputEl) {
+if (inputEl) {
         if (val.trim()) {
           inputEl.classList.add("has-value");
         } else {
           inputEl.classList.remove("has-value");
+        }
+        // O check vive na LINHA (.has-qty), não no input.
+        const rowEl = inputEl.closest(".item-row");
+        if (rowEl) {
+          rowEl.classList.toggle("has-qty", val.trim() !== "");
         }
       }
 
