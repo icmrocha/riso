@@ -11,9 +11,8 @@ function doGet(e) {
 
   // Só as marcações DESTE ciclo (id que o celular manda na URL).
   // Sem isso, o último CONCLUIDO de qualquer sábado volta na tela.
-  const idPedido = e && e.parameter && e.parameter.idServico
-    ? String(e.parameter.idServico)
-    : "";
+  // A comanda da casa fica no Script (não no localStorage de cada celular).
+  const idPedido = PropertiesService.getScriptProperties().getProperty("cicloAtual") || "";
 
   const statusMap = {};
   dadosLog.forEach(linha => {
@@ -72,6 +71,8 @@ function doPost(e) {
     }
 // Novo ciclo: o HTML já trocou o idServico. Não precisa apagar o LOG.
     if (dadosRecebidos.acao === "RESET") {
+      const novoId = dadosRecebidos.idServico || ("SERV_" + Date.now());
+      PropertiesService.getScriptProperties().setProperty("cicloAtual", novoId);
       return ContentService.createTextOutput(JSON.stringify({ status: "sucesso" }))
         .setMimeType(ContentService.MimeType.JSON);
     }
@@ -79,8 +80,12 @@ function doPost(e) {
     const abaLog = ss.getSheetByName("LOG");
     const { idServico, categoria, tarefa, tag, status, horarioConclusao } = dadosRecebidos;
 
+    const cicloCasa = PropertiesService.getScriptProperties().getProperty("cicloAtual")
+      || idServico
+      || "SERVICO_PADRAO";
+
     abaLog.appendRow([
-      idServico || "SERVICO_PADRAO",
+      cicloCasa,
       categoria,
       tarefa,
       tag,
