@@ -349,11 +349,12 @@
   <div class="intro-section" id="introSection">
     <h1>Que bom ter você por aqui!</h1>
     <div class="intro-text">
-      A Casa Riso é um espaço acolhedor e intimista, com poucos lugares. Para garantir a melhor experiência, <b>faça sua reserva de forma prática online.</b>
+      A Casa Riso é um espaço acolhedor e intimista, com poucos lugares. Para garantir a melhor experiência, faça sua reserva de forma prática online, <b>utilizando o formulário abaixo.</b>
     </div>
 
     <ul class="bullets-list">
-      <li>Utilize o formulário abaixo para realizar sua reserva</li>
+      <li>Estamos localizados na Vila Suissa, em Miguel Pereira/RJ</li>
+      <li>A localização exata será compartilhada na confirmação da reserva </li>
       <li>Funcionamos aos Sábados e Domingos, de meio-dia às 17h</li>
     </ul>
   </div>
@@ -447,6 +448,16 @@
         <div><strong>Pessoas:</strong> <span id="resPessoas"></span></div>
         <div><strong>Observações:</strong> <span id="resObs"></span></div>
       </div>
+              <div>
+          <strong>Onde:</strong>
+          <b>Rua Dr. Peralta, 55 - Vila Suissa, Miguel Pereira/RJ</b>
+          <br>
+          <a href="https://maps.app.goo.gl/bZJ1DQVeKAm8rjgQ8"
+             target="_blank"
+             rel="noopener noreferrer">
+            Abrir no Google Maps
+          </a>
+        </div>
     </div>
     
     <!-- BOTÕES DE AÇÃO DO COMPROVANTE -->
@@ -711,8 +722,9 @@ BEGIN:VEVENT
 SUMMARY:Reserva Riso - ${nome}
 DTSTART:${startTimeStr}
 DTEND:${endTimeStr}
-LOCATION:Casa Riso Bistro
-DESCRIPTION:Sua reserva está confirmada!\\n\\nCódigo: ${codigo}\\nQuantidade: ${pessoas} pessoa(s)
+LOCATION:Casa Riso - Vila Suissa, Miguel Pereira/RJ
+URL:https://www.google.com/maps/search/?api=1&query=Casa+Riso+Vila+Suissa+Miguel+Pereira+RJ
+DESCRIPTION:Sua reserva está confirmada!\\n\\nCódigo: ${codigo}\\nQuantidade: ${pessoas} pessoa(s)\\n\\nLocal: Vila Suissa, Miguel Pereira/RJ\\nMaps: https://www.google.com/maps/search/?api=1&query=Casa+Riso+Vila+Suissa+Miguel+Pereira+RJ
 END:VEVENT
 END:VCALENDAR`;
 
