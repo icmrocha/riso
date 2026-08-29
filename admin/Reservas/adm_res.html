@@ -1,0 +1,1290 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Painel de Reservas - ADM Riso</title>
+  
+  <!-- ESTILOS CSS DO PAINEL ADMINISTRATIVO -->
+  <style>
+    :root {
+      --bg: #f8fafc;
+      --card-bg: #ffffff;
+      --text: #0f172a;
+      --primary: #2563eb;
+      --primary-hover: #1d4ed8;
+      --border: #cbd5e1;
+      --muted: #64748b;
+      --danger: #ef4444;
+      --success: #10b981;
+      --success-light: #ecfdf5;
+      --danger-light: #fef2f2;
+    }
+
+    * { box-sizing: border-box; }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      background-color: var(--bg);
+      color: var(--text);
+      margin: 0;
+      padding: 16px;
+      max-width: 950px;
+      margin-left: auto;
+      margin-right: auto;
+      padding-bottom: 40px;
+    }
+
+    .header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 20px;
+      border-bottom: 2px solid var(--border);
+      padding-bottom: 12px;
+      flex-wrap: wrap;
+      gap: 10px;
+    }
+
+    h1 {
+      font-size: 1.4rem;
+      margin: 0;
+    }
+
+    .top-actions {
+      display: flex;
+      gap: 10px;
+      align-items: center;
+    }
+
+    .btn-secondary {
+      background-color: #e2e8f0;
+      color: var(--text);
+      border: 1px solid var(--border);
+      padding: 8px 12px;
+      border-radius: 8px;
+      font-size: 0.85rem;
+      font-weight: 600;
+      cursor: pointer;
+      text-decoration: none;
+      transition: all 0.2s;
+    }
+
+    .btn-secondary:hover {
+      background-color: #cbd5e1;
+    }
+
+    .btn-primary {
+      background-color: var(--primary);
+      color: white;
+      border: none;
+      padding: 8px 14px;
+      border-radius: 8px;
+      font-size: 0.85rem;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+
+    .btn-primary:hover {
+      background-color: var(--primary-hover);
+    }
+
+    /* CARD DE ESTATÍSTICAS DA AGENDA */
+    .agenda-stats-card {
+      background: var(--card-bg);
+      padding: 14px 18px;
+      border-radius: 12px;
+      box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+      margin-bottom: 20px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      flex-wrap: wrap;
+      gap: 12px;
+      border: 1px solid var(--border);
+    }
+
+    .stats-group {
+      display: flex;
+      gap: 24px;
+      flex-wrap: wrap;
+      align-items: center;
+    }
+
+    .stat-item {
+      display: flex;
+      flex-direction: column;
+    }
+
+    .stat-label {
+      font-size: 0.75rem;
+      font-weight: 700;
+      color: var(--muted);
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+    }
+
+    .stat-value {
+      font-size: 0.95rem;
+      font-weight: 700;
+      color: var(--primary);
+      margin-top: 2px;
+    }
+
+    /* BARRA DE FILTRO E NAVEGAÇÃO */
+    .filter-card {
+      background: var(--card-bg);
+      padding: 16px;
+      border-radius: 12px;
+      box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+      margin-bottom: 20px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      flex-wrap: wrap;
+      gap: 12px;
+    }
+
+    .filter-group {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .filter-card label {
+      font-weight: 600;
+      font-size: 0.9rem;
+    }
+
+    .filter-card input[type="date"] {
+      padding: 8px 12px;
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      font-size: 0.95rem;
+    }
+
+    /* CALENDÁRIO MODAL DE DATAS LIBERADAS */
+    .modal-overlay {
+      position: fixed;
+      top: 0; left: 0; right: 0; bottom: 0;
+      background: rgba(15, 23, 42, 0.5);
+      display: none;
+      justify-content: center;
+      align-items: center;
+      z-index: 1000;
+      padding: 16px;
+    }
+
+    .modal-card {
+      background: var(--card-bg);
+      border-radius: 12px;
+      padding: 20px;
+      width: 100%;
+      max-width: 440px;
+      box-shadow: 0 10px 25px rgba(0,0,0,0.15);
+      max-height: 90vh;
+      overflow-y: auto;
+    }
+
+    .modal-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 14px;
+    }
+
+    .modal-header h2 {
+      font-size: 1.1rem;
+      margin: 0;
+    }
+
+    .calendar-controls {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 10px;
+    }
+
+    .calendar-grid {
+      display: grid;
+      grid-template-columns: repeat(7, 1fr);
+      gap: 6px;
+      text-align: center;
+    }
+
+    .cal-header {
+      font-size: 0.75rem;
+      font-weight: 700;
+      color: var(--muted);
+      padding: 4px 0;
+    }
+
+    .cal-day {
+      padding: 10px 2px;
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      font-size: 0.85rem;
+      font-weight: 600;
+      cursor: pointer;
+      background: #fff;
+      transition: all 0.15s ease;
+    }
+
+    .cal-day.empty {
+      border: none;
+      background: transparent;
+      cursor: default;
+    }
+
+    .cal-day.active {
+      background-color: var(--success);
+      color: white;
+      border-color: var(--success);
+    }
+
+    .cal-day.selected-day {
+      border: 2px solid var(--primary);
+      box-shadow: 0 0 0 2px rgba(37, 99, 235, 0.2);
+    }
+
+    /* PAINEL DE CONFIGURAÇÃO DE HORÁRIOS DO DIA SELECIONADO */
+    .day-config-panel {
+      margin-top: 16px;
+      background: #f1f5f9;
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 12px;
+    }
+
+    .day-config-title {
+      font-size: 0.85rem;
+      font-weight: 700;
+      color: var(--text);
+      margin-bottom: 8px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    .slots-checkbox-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 6px;
+    }
+
+    .slot-checkbox-label {
+      background: #ffffff;
+      border: 1px solid var(--border);
+      padding: 6px 8px;
+      border-radius: 6px;
+      font-size: 0.8rem;
+      font-weight: 600;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      cursor: pointer;
+    }
+
+    .slot-checkbox-label input {
+      accent-color: var(--primary);
+    }
+
+    .modal-footer {
+      margin-top: 18px;
+      display: flex;
+      justify-content: flex-end;
+      gap: 10px;
+    }
+
+    /* PAINEL DE CARDS DE HORÁRIO (OCULTO POR DEFAULT) */
+    .slots-summary-grid {
+      display: none;
+      grid-template-columns: repeat(auto-fit, minmax(130px, 1fr));
+      gap: 10px;
+      margin-bottom: 20px;
+    }
+
+    .slot-card {
+      background: var(--card-bg);
+      padding: 12px;
+      border-radius: 8px;
+      border: 1px solid var(--border);
+      text-align: center;
+    }
+
+    .slot-card .time {
+      font-weight: 700;
+      font-size: 1.1rem;
+      margin-bottom: 4px;
+    }
+
+    .slot-card .capacity {
+      font-size: 0.85rem;
+      font-weight: 600;
+      color: var(--muted);
+    }
+
+    .slot-card .capacity.has-reservations {
+      color: var(--success);
+    }
+
+    .slot-card .capacity.exceeded {
+      color: var(--danger);
+      font-weight: 700;
+    }
+
+    /* SEÇÕES DE DATA E HORÁRIO */
+    .date-section-title {
+      font-size: 1.1rem;
+      font-weight: 700;
+      margin: 24px 0 12px 0;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      color: var(--text);
+      border-bottom: 2px solid var(--border);
+      padding-bottom: 6px;
+    }
+
+    .time-section {
+      background: var(--card-bg);
+      border-radius: 12px;
+      box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+      margin-bottom: 16px;
+      overflow: hidden;
+      border: 1px solid var(--border);
+    }
+
+    .time-section-header {
+      background-color: #f1f5f9;
+      padding: 12px 16px;
+      font-weight: 700;
+      font-size: 1rem;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      border-bottom: 1px solid var(--border);
+    }
+
+    .table-container {
+      overflow-x: auto;
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      text-align: left;
+      font-size: 0.88rem;
+    }
+
+    th, td {
+      padding: 12px;
+      border-bottom: 1px solid var(--border);
+      vertical-align: middle;
+    }
+
+    th {
+      background-color: #fafafa;
+      font-weight: 700;
+      color: var(--text);
+    }
+
+    tr:last-child td {
+      border-bottom: none;
+    }
+
+    .badge-code {
+      background-color: #e0f2fe;
+      color: #0369a1;
+      padding: 4px 8px;
+      border-radius: 4px;
+      font-weight: 700;
+      font-family: monospace;
+    }
+
+    tr.status-realizada {
+      background-color: var(--success-light) !important;
+    }
+
+    tr.status-realizada .badge-code {
+      background-color: #d1fae5;
+      color: #065f46;
+      text-decoration: line-through;
+    }
+
+    tr.status-cancelada {
+      background-color: #fef2f2 !important;
+      background-image: repeating-linear-gradient(45deg, transparent, transparent 10px, rgba(239, 68, 68, 0.05) 10px, rgba(239, 68, 68, 0.05) 20px) !important;
+      opacity: 0.7;
+    }
+
+    tr.status-cancelada td {
+      color: #991b1b;
+    }
+
+    tr.status-cancelada .badge-code {
+      background-color: #fee2e2;
+      color: #991b1b;
+      text-decoration: line-through;
+    }
+
+    tr.data-passada {
+      opacity: 0.55;
+    }
+
+    .btn-action-icon {
+      background: none;
+      border: none;
+      font-size: 1.1rem;
+      cursor: pointer;
+      padding: 4px 8px;
+      border-radius: 4px;
+      transition: background 0.2s;
+    }
+
+    .btn-action-icon:hover {
+      background-color: rgba(0,0,0,0.05);
+    }
+
+    .loading-overlay {
+      text-align: center;
+      padding: 20px;
+      color: var(--muted);
+    }
+
+    .modal-form-group {
+      margin-bottom: 14px;
+    }
+
+    .modal-form-group label {
+      display: block;
+      font-size: 0.85rem;
+      font-weight: 600;
+      margin-bottom: 4px;
+      color: var(--text);
+    }
+
+    .modal-form-group input,
+    .modal-form-group select,
+    .modal-form-group textarea {
+      width: 100%;
+      padding: 8px 10px;
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      font-size: 0.9rem;
+      font-family: inherit;
+    }
+  </style>
+</head>
+<body>
+
+  <!-- CABEÇALHO DO PAINEL -->
+  <div class="header">
+    <h1>Reservas Riso - Painel ADM</h1>
+    <div class="top-actions">
+      <button class="btn-primary" onclick="abrirModalNovaReserva()">➕ Adicionar Reserva</button>
+      <a href="https://riso.art.br/res_index.html" class="btn-secondary" target="_blank">← Site do Cliente</a>
+    </div>
+  </div>
+
+  <!-- CARD DE ESTATÍSTICAS DA AGENDA -->
+  <div class="agenda-stats-card">
+    <div class="stats-group">
+      <div class="stat-item">
+        <span class="stat-label">Dias Liberados</span>
+        <span class="stat-value" id="statDiasCount">-</span>
+      </div>
+      <div class="stat-item">
+        <span class="stat-label">Próxima Data Aberta</span>
+        <span class="stat-value" id="statProximaData">-</span>
+      </div>
+      <div class="stat-item">
+        <span class="stat-label">Última Data Aberta</span>
+        <span class="stat-value" id="statUltimaData">-</span>
+      </div>
+    </div>
+    <button class="btn-secondary" onclick="abrirModalCalendario()">Gerenciar Datas</button>
+  </div>
+
+  <!-- BARRA DE FILTRO E MODO DE VISUALIZAÇÃO -->
+  <div class="filter-card">
+    <div class="filter-group">
+      <label for="dataConsulta">Data do serviço:</label>
+      <input type="date" id="dataConsulta" onchange="aoAlterarFiltroData()">
+    </div>
+    <div class="filter-group">
+      <button class="btn-secondary" id="btnLimparFiltro" style="display:none;" onclick="limparFiltroData()">🧹 Limpar Filtro</button>
+      <button class="btn-secondary" id="btnOcultarPassadas" onclick="toggleOcultarPassadas()">👁️ Ocultar reservas passadas</button>
+    </div>
+  </div>
+
+  <!-- RESUMO DE OCUPAÇÃO DOS SLOTS DE HORÁRIO -->
+  <div class="slots-summary-grid" id="slotsSummary"></div>
+
+  <!-- CONTAINER DE SEÇÕES / TABELAS DE RESERVAS -->
+  <div id="containerReservas">
+    <div class="loading-overlay">Buscando reservas...</div>
+  </div>
+
+  <!-- MODAL GERENCIADOR DE DATAS E HORÁRIOS LIBERADOS -->
+  <div class="modal-overlay" id="modalCalendario">
+    <div class="modal-card">
+      <div class="modal-header">
+        <h2>Gerenciar Agenda e Horários</h2>
+        <button class="btn-action-icon" onclick="fecharModalCalendario()">✕</button>
+      </div>
+
+      <div class="calendar-controls">
+        <button class="btn-secondary" onclick="mudarMesCalendario(-1)">❮ Anterior</button>
+        <strong id="labelMesAno">Mês/Ano</strong>
+        <button class="btn-secondary" onclick="mudarMesCalendario(1)">Próximo ❯</button>
+      </div>
+
+      <div class="calendar-grid">
+        <div class="cal-header">Dom</div>
+        <div class="cal-header">Seg</div>
+        <div class="cal-header">Ter</div>
+        <div class="cal-header">Qua</div>
+        <div class="cal-header">Qui</div>
+        <div class="cal-header">Sex</div>
+        <div class="cal-header">Sáb</div>
+      </div>
+      <div class="calendar-grid" id="gridDiasCalendario" style="margin-top: 6px;"></div>
+
+      <!-- PAINEL DINÂMICO DE HORÁRIOS PARA O DIA CLICADO -->
+      <div id="painelConfigDia" class="day-config-panel" style="display:none;">
+        <div class="day-config-title">
+          <span id="tituloDataSelecionada">Horários para: --/--/----</span>
+          <span style="font-size: 0.75rem; color: var(--muted);">Marque os horários abertos</span>
+        </div>
+        <div class="slots-checkbox-grid" id="gridHorariosDia">
+          <label class="slot-checkbox-label"><input type="checkbox" value="12:00" onchange="atualizarHorariosDia(this)"> 12:00</label>
+          <label class="slot-checkbox-label"><input type="checkbox" value="13:00" onchange="atualizarHorariosDia(this)"> 13:00</label>
+          <label class="slot-checkbox-label"><input type="checkbox" value="14:00" onchange="atualizarHorariosDia(this)"> 14:00</label>
+          <label class="slot-checkbox-label"><input type="checkbox" value="15:00" onchange="atualizarHorariosDia(this)"> 15:00</label>
+          <label class="slot-checkbox-label"><input type="checkbox" value="16:00" onchange="atualizarHorariosDia(this)"> 16:00</label>
+          <label class="slot-checkbox-label"><input type="checkbox" value="19:00" onchange="atualizarHorariosDia(this)"> 19:00</label>
+          <label class="slot-checkbox-label"><input type="checkbox" value="20:00" onchange="atualizarHorariosDia(this)"> 20:00</label>
+          <label class="slot-checkbox-label"><input type="checkbox" value="21:00" onchange="atualizarHorariosDia(this)"> 21:00</label>
+        </div>
+      </div>
+
+      <div class="modal-footer">
+        <button class="btn-secondary" onclick="fecharModalCalendario()">Cancelar</button>
+        <button class="btn-primary" id="btnSalvarDatas" onclick="salvarDatasLiberadas()">Salvar Alterações</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- MODAL ADICIONAR RESERVA MANUALMENTE (ADM) -->
+  <div class="modal-overlay" id="modalNovaReserva">
+    <div class="modal-card" style="max-width: 480px;">
+      <div class="modal-header">
+        <h2>Nova Reserva (Manual)</h2>
+        <button class="btn-action-icon" onclick="fecharModalNovaReserva()">✕</button>
+      </div>
+      <form id="formNovaReserva" onsubmit="adicionarReservaManual(event)">
+        <div class="modal-form-group">
+          <label for="admNome">Nome do Cliente:</label>
+          <input type="text" id="admNome" required placeholder="Nome completo">
+        </div>
+        <div class="modal-form-group">
+          <label for="admTelefone">Telefone (WhatsApp):</label>
+          <input type="tel" id="admTelefone" required placeholder="(24) 99999-9999" maxlength="15" oninput="aplicarMascaraTelefone(this)">
+        </div>
+        <div class="modal-form-group">
+          <label for="admData">Data da Reserva:</label>
+          <input type="date" id="admData" required>
+        </div>
+        <div class="modal-form-group">
+          <label for="admHorario">Horário:</label>
+          <select id="admHorario" required>
+            <option value="" disabled selected>Selecione o horário</option>
+            <option value="12:00">12:00</option>
+            <option value="13:00">13:00</option>
+            <option value="14:00">14:00</option>
+            <option value="15:00">15:00</option>
+            <option value="16:00">16:00</option>
+            <option value="19:00">19:00</option>
+            <option value="20:00">20:00</option>
+            <option value="21:00">21:00</option>
+          </select>
+        </div>
+        <div class="modal-form-group">
+          <label for="admPessoas">Quantidade de Pessoas:</label>
+          <select id="admPessoas" required>
+            <option value="1">1 pessoa</option>
+            <option value="2" selected>2 pessoas</option>
+            <option value="3">3 pessoas</option>
+            <option value="4">4 pessoas</option>
+            <option value="5">5 pessoas</option>
+            <option value="6">6 pessoas</option>
+            <option value="7">7 pessoas</option>
+            <option value="8">8 pessoas</option>
+            <option value="9">9 pessoas (Override)</option>
+            <option value="10">10 pessoas (Override)</option>
+            <option value="12">12 pessoas (Override)</option>
+            <option value="15">15 pessoas (Override)</option>
+          </select>
+        </div>
+        <div class="modal-form-group">
+          <label for="admObs">Observações / Alergias:</label>
+          <textarea id="admObs" rows="3" placeholder="Opcional"></textarea>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn-secondary" onclick="fecharModalNovaReserva()">Cancelar</button>
+          <button type="submit" class="btn-primary" id="btnSalvarReservaManual">Salvar Reserva</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- JAVASCRIPT DE INTEGRAÇÃO ADM -->
+  <script>
+    const API_URL = "https://script.google.com/macros/s/AKfycbyOyPr6hWM80KTGIhsrML7wWX1qxhGDW96j-uFNJqX-MmLcD-uiTLTojW5kkFdK870L/exec";
+
+    let ocultarPassadas = false;
+    let agendaLiberadaMap = {}; // Ex: {"29/08/2026": ["12:00", "13:00"]}
+    let dataCalendarioAtual = new Date();
+    let dataSelecionadaNoModal = null; // Data no formato DD/MM/AAAA sendo editada no modal
+
+    const inputData = document.getElementById("dataConsulta");
+    const hojeIso = new Date().toISOString().split("T")[0];
+
+    inputData.value = "";
+    carregarTodasReservas();
+    carregarDatasLiberadasDoServidor();
+
+    function aplicarMascaraTelefone(input) {
+      let valor = input.value.replace(/\D/g, "");
+      if (valor.length > 11) valor = valor.substring(0, 11);
+
+      if (valor.length > 7) {
+        valor = valor.replace(/^(\d{2})(\d{5})(\d{4}).*/, "($1) $2-$3");
+      } else if (valor.length > 2) {
+        valor = valor.replace(/^(\d{2})(\d+)/, "($1) $2");
+      } else if (valor.length > 0) {
+        valor = valor.replace(/^(\d*)/, "($1");
+      }
+      input.value = valor;
+    }
+
+    function aoAlterarFiltroData() {
+      const dataVal = inputData.value;
+      const btnLimpar = document.getElementById("btnLimparFiltro");
+      const slotsSummary = document.getElementById("slotsSummary");
+
+      if (dataVal) {
+        btnLimpar.style.display = "inline-block";
+        slotsSummary.style.display = "grid";
+        carregarReservasPorData(dataVal);
+      } else {
+        limparFiltroData();
+      }
+    }
+
+    function limparFiltroData() {
+      inputData.value = "";
+      document.getElementById("btnLimparFiltro").style.display = "none";
+      document.getElementById("slotsSummary").style.display = "none";
+      carregarTodasReservas();
+    }
+
+    function toggleOcultarPassadas() {
+      ocultarPassadas = !ocultarPassadas;
+      document.getElementById("btnOcultarPassadas").innerText = ocultarPassadas ? "👁️ Mostrar reservas passadas" : "👁️ Ocultar reservas passadas";
+      
+      if (inputData.value) {
+        carregarReservasPorData(inputData.value);
+      } else {
+        carregarTodasReservas();
+      }
+    }
+
+    async function carregarTodasReservas() {
+      const containerReservas = document.getElementById("containerReservas");
+      containerReservas.innerHTML = `<div class="loading-overlay">Buscando todas as reservas...</div>`;
+
+      try {
+        const response = await fetch(`${API_URL}?action=getTodasReservas`);
+        const result = await response.json();
+
+        if (result.reservas) {
+          let lista = result.reservas;
+          if (ocultarPassadas) {
+            const hojeDataObj = parseDataPtBr(formatarDataIsoParaPtBr(hojeIso));
+            lista = lista.filter(r => parseDataPtBr(r.data) >= hojeDataObj);
+          }
+          renderSecoesPorDataEHorario(lista);
+        } else {
+          containerReservas.innerHTML = `<div class="loading-overlay">Nenhuma reserva encontrada.</div>`;
+        }
+      } catch (err) {
+        containerReservas.innerHTML = `<div class="loading-overlay" style="color:var(--danger);">Erro ao carregar histórico de reservas.</div>`;
+      }
+    }
+
+    async function carregarReservasPorData(dataVal) {
+      const summaryContainer = document.getElementById("slotsSummary");
+      const containerReservas = document.getElementById("containerReservas");
+
+      summaryContainer.innerHTML = `<div class="loading-overlay" style="grid-column: 1/-1;">Carregando resumo do dia...</div>`;
+      containerReservas.innerHTML = `<div class="loading-overlay">Buscando reservas do dia...</div>`;
+
+      try {
+        const respDisp = await fetch(`${API_URL}?data=${dataVal}`);
+        const resDisp = await respDisp.json();
+
+        if (resDisp.status === "success") {
+          renderSlotsSummary(resDisp.disponibilidade);
+        }
+
+        const respList = await fetch(`${API_URL}?data=${dataVal}&action=getReservasData`);
+        const resList = await respList.json();
+
+        if (resList.reservas) {
+          let lista = resList.reservas;
+          if (ocultarPassadas) {
+            const hojeDataObj = parseDataPtBr(formatarDataIsoParaPtBr(hojeIso));
+            lista = lista.filter(r => parseDataPtBr(r.data) >= hojeDataObj);
+          }
+          renderSecoesApenasPorHorario(lista, dataVal);
+        } else {
+          containerReservas.innerHTML = `<div class="loading-overlay">Nenhuma reserva encontrada para esta data.</div>`;
+        }
+      } catch (err) {
+        summaryContainer.innerHTML = `<div class="loading-overlay" style="color:var(--danger); grid-column: 1/-1;">Erro ao carregar dados.</div>`;
+        containerReservas.innerHTML = `<div class="loading-overlay" style="color:var(--danger);">Erro de conexão com o servidor.</div>`;
+      }
+    }
+
+    function renderSlotsSummary(disponibilidade) {
+      const summaryContainer = document.getElementById("slotsSummary");
+      summaryContainer.innerHTML = "";
+
+      Object.keys(disponibilidade).forEach(horario => {
+        const info = disponibilidade[horario];
+        const card = document.createElement("div");
+        card.className = "slot-card";
+
+        const ocupadas = info.ocupadas;
+        const excedido = ocupadas > 8;
+        let classeCapacidade = "capacity";
+        if (excedido) {
+          classeCapacidade = "capacity exceeded";
+        } else if (ocupadas > 0) {
+          classeCapacidade = "capacity has-reservations";
+        }
+
+        card.innerHTML = `
+          <div class="time">${horario}</div>
+          <div class="${classeCapacidade}">${ocupadas}/8 vagas ocupadas${excedido ? ' ⚠️' : ''}</div>
+        `;
+
+        summaryContainer.appendChild(card);
+      });
+    }
+
+    function renderSecoesPorDataEHorario(reservas) {
+      const containerReservas = document.getElementById("containerReservas");
+      containerReservas.innerHTML = "";
+
+      if (reservas.length === 0) {
+        containerReservas.innerHTML = `<div class="loading-overlay">Nenhuma reserva para exibir.</div>`;
+        return;
+      }
+
+      reservas.sort((a, b) => {
+        const dataA = parseDataPtBr(a.data);
+        const dataB = parseDataPtBr(b.data);
+        if (dataA - dataB !== 0) return dataA - dataB;
+        return a.horario.localeCompare(b.horario);
+      });
+
+      const gruposPorData = {};
+      reservas.forEach(res => {
+        if (!gruposPorData[res.data]) gruposPorData[res.data] = [];
+        gruposPorData[res.data].push(res);
+      });
+
+      const hojeObj = parseDataPtBr(formatarDataIsoParaPtBr(hojeIso));
+
+      Object.keys(gruposPorData).forEach(dataStr => {
+        const listaData = gruposPorData[dataStr];
+        
+        const dateTitle = document.createElement("div");
+        dateTitle.className = "date-section-title";
+        dateTitle.innerText = `Data: ${dataStr}`;
+        containerReservas.appendChild(dateTitle);
+
+        const gruposHorario = {};
+        listaData.forEach(r => {
+          if (!gruposHorario[r.horario]) gruposHorario[r.horario] = [];
+          gruposHorario[r.horario].push(r);
+        });
+
+        Object.keys(gruposHorario).forEach(horarioStr => {
+          const listaSlot = gruposHorario[horarioStr];
+          const totalPessoas = listaSlot.reduce((acc, r) => acc + (r.codigo === "CANCELADA" ? 0 : Number(r.pessoas)), 0);
+          const excedido = totalPessoas > 8;
+
+          const section = document.createElement("div");
+          section.className = "time-section";
+
+          let htmlHeader = `
+            <div class="time-section-header">
+              <span>Horário: ${horarioStr}</span>
+              <span style="font-size: 0.85rem; font-weight: 600; color: ${excedido ? 'var(--danger)' : 'var(--muted)'};">
+                ${totalPessoas}/8 vagas ocupadas${excedido ? ' ⚠️ (Excedido)' : ''}
+              </span>
+            </div>
+          `;
+
+          let htmlTabela = `
+            <div class="table-container">
+              <table>
+                <thead>
+                  <tr>
+                    <th style="width: 40px; text-align: center;">✓</th>
+                    <th>Código</th>
+                    <th>Cliente</th>
+                    <th>Telefone</th>
+                    <th>Pessoas</th>
+                    <th>Observações / Alergias</th>
+                    <th style="width: 60px; text-align: center;">Ações</th>
+                  </tr>
+                </thead>
+                <tbody>
+          `;
+
+          listaSlot.forEach(res => {
+            const ehRealizada = res.codigo === "REALIZADA";
+            const ehCancelada = res.codigo === "CANCELADA";
+            const dataResObj = parseDataPtBr(res.data);
+            const ehPassada = dataResObj < hojeObj;
+
+            let classeLinha = "";
+            if (ehCancelada) classeLinha = "status-cancelada";
+            else if (ehRealizada) classeLinha = "status-realizada";
+            else if (ehPassada) classeLinha = "data-passada";
+
+            const codigoExibicao = ehCancelada ? "CANCELADA" : (ehRealizada ? "REALIZADA" : res.codigo);
+
+            htmlTabela += `
+              <tr class="${classeLinha}">
+                <td style="text-align: center;">
+                  <input type="checkbox" ${ehRealizada ? 'checked' : ''} ${ehCancelada ? 'disabled' : ''} 
+                    onchange="alterarStatusReserva('${res.codigoOriginal || res.codigo}', this.checked ? 'REALIZADA' : 'REABRIR')">
+                </td>
+                <td><span class="badge-code">${codigoExibicao}</span></td>
+                <td>${res.nome}</td>
+                <td><a href="https://wa.me/55${res.telefone.replace(/\D/g,'')}" target="_blank" style="color:var(--primary); font-weight: 600;">${res.telefone}</a></td>
+                <td><strong>${res.pessoas} p</strong></td>
+                <td>${res.observacoes}</td>
+                <td style="text-align: center;">
+                  ${ehCancelada ? 
+                    `<button class="btn-action-icon" title="Reabrir Reserva" onclick="alterarStatusReserva('${res.codigoOriginal}', 'REABRIR')">🔄</button>` : 
+                    `<button class="btn-action-icon" title="Cancelar Reserva" onclick="alterarStatusReserva('${res.codigo}', 'CANCELADA')">🗑️</button>`
+                  }
+                </td>
+              </tr>
+            `;
+          });
+
+          htmlTabela += `</tbody></table></div>`;
+          section.innerHTML = htmlHeader + htmlTabela;
+          containerReservas.appendChild(section);
+        });
+      });
+    }
+
+    function renderSecoesApenasPorHorario(reservas, dataVal) {
+      const containerReservas = document.getElementById("containerReservas");
+      containerReservas.innerHTML = "";
+
+      if (reservas.length === 0) {
+        containerReservas.innerHTML = `<div class="loading-overlay">Nenhuma reserva para esta data.</div>`;
+        return;
+      }
+
+      reservas.sort((a, b) => a.horario.localeCompare(b.horario));
+
+      const grupos = {};
+      reservas.forEach(res => {
+        if (!grupos[res.horario]) grupos[res.horario] = [];
+        grupos[res.horario].push(res);
+      });
+
+      const hojeObj = parseDataPtBr(formatarDataIsoParaPtBr(hojeIso));
+
+      Object.keys(grupos).forEach(horarioStr => {
+        const listaSlot = grupos[horarioStr];
+        const totalPessoas = listaSlot.reduce((acc, r) => acc + (r.codigo === "CANCELADA" ? 0 : Number(r.pessoas)), 0);
+        const excedido = totalPessoas > 8;
+
+        const section = document.createElement("div");
+        section.className = "time-section";
+
+        let htmlHeader = `
+          <div class="time-section-header">
+            <span>Horário: ${horarioStr}</span>
+            <span style="font-size: 0.85rem; font-weight: 600; color: ${excedido ? 'var(--danger)' : 'var(--muted)'};">
+              ${totalPessoas}/8 vagas ocupadas${excedido ? ' ⚠️ (Excedido)' : ''}
+            </span>
+          </div>
+        `;
+
+        let htmlTabela = `
+          <div class="table-container">
+            <table>
+              <thead>
+                <tr>
+                  <th style="width: 40px; text-align: center;">✓</th>
+                  <th>Código</th>
+                  <th>Cliente</th>
+                  <th>Telefone</th>
+                  <th>Pessoas</th>
+                  <th>Observações / Alergias</th>
+                  <th style="width: 60px; text-align: center;">Ações</th>
+                </tr>
+              </thead>
+              <tbody>
+        `;
+
+        listaSlot.forEach(res => {
+          const ehRealizada = res.codigo === "REALIZADA";
+          const ehCancelada = res.codigo === "CANCELADA";
+          const dataResObj = parseDataPtBr(res.data);
+          const ehPassada = dataResObj < hojeObj;
+
+          let classeLinha = "";
+          if (ehCancelada) classeLinha = "status-cancelada";
+          else if (ehRealizada) classeLinha = "status-realizada";
+          else if (ehPassada) classeLinha = "data-passada";
+
+          const codigoExibicao = ehCancelada ? "CANCELADA" : (ehRealizada ? "REALIZADA" : res.codigo);
+
+          htmlTabela += `
+            <tr class="${classeLinha}">
+              <td style="text-align: center;">
+                <input type="checkbox" ${ehRealizada ? 'checked' : ''} ${ehCancelada ? 'disabled' : ''} 
+                  onchange="alterarStatusReserva('${res.codigoOriginal || res.codigo}', this.checked ? 'REALIZADA' : 'REABRIR')">
+              </td>
+              <td><span class="badge-code">${codigoExibicao}</span></td>
+              <td>${res.nome}</td>
+              <td><a href="https://wa.me/55${res.telefone.replace(/\D/g,'')}" target="_blank" style="color:var(--primary); font-weight: 600;">${res.telefone}</a></td>
+              <td><strong>${res.pessoas} p</strong></td>
+              <td>${res.observacoes}</td>
+              <td style="text-align: center;">
+                ${ehCancelada ? 
+                  `<button class="btn-action-icon" title="Reabrir Reserva" onclick="alterarStatusReserva('${res.codigoOriginal}', 'REABRIR')">🔄</button>` : 
+                  `<button class="btn-action-icon" title="Cancelar Reserva" onclick="alterarStatusReserva('${res.codigo}', 'CANCELADA')">🗑️</button>`
+                }
+              </td>
+            </tr>
+          `;
+        });
+
+        htmlTabela += `</tbody></table></div>`;
+        section.innerHTML = htmlHeader + htmlTabela;
+        containerReservas.appendChild(section);
+      });
+    }
+
+    async function alterarStatusReserva(codigoReserva, novoStatus) {
+      try {
+        const payload = {
+          action: "atualizarStatusReserva",
+          codigoReserva: codigoReserva,
+          novoStatus: novoStatus
+        };
+
+        const response = await fetch(API_URL, {
+          method: "POST",
+          headers: { "Content-Type": "text/plain;charset=utf-8" },
+          body: JSON.stringify(payload)
+        });
+
+        const result = await response.json();
+        if (result.status === "success") {
+          if (inputData.value) {
+            carregarReservasPorData(inputData.value);
+          } else {
+            carregarTodasReservas();
+          }
+        } else {
+          alert(result.message || "Erro ao atualizar status.");
+        }
+      } catch (err) {
+        alert("Erro de conexão ao atualizar status.");
+      }
+    }
+
+    /* MODAL DE ADICIONAR RESERVA MANUALMENTE */
+    function abrirModalNovaReserva() {
+      document.getElementById("modalNovaReserva").style.display = "flex";
+      document.getElementById("admData").value = inputData.value || hojeIso;
+    }
+
+    function fecharModalNovaReserva() {
+      document.getElementById("modalNovaReserva").style.display = "none";
+      document.getElementById("formNovaReserva").reset();
+    }
+
+    async function adicionarReservaManual(e, override = false) {
+      if (e) e.preventDefault();
+      const btnSalvar = document.getElementById("btnSalvarReservaManual");
+      btnSalvar.disabled = true;
+      btnSalvar.innerText = "Salvando...";
+
+      const payload = {
+        nome: document.getElementById("admNome").value.trim(),
+        telefone: document.getElementById("admTelefone").value.trim(),
+        dataReserva: document.getElementById("admData").value,
+        horario: document.getElementById("admHorario").value,
+        pessoas: document.getElementById("admPessoas").value,
+        observacoes: document.getElementById("admObs").value.trim() || "Reserva inserida manualmente pelo ADM",
+        override: override
+      };
+
+      try {
+        const response = await fetch(API_URL, {
+          method: "POST",
+          headers: { "Content-Type": "text/plain;charset=utf-8" },
+          body: JSON.stringify(payload)
+        });
+
+        const result = await response.json();
+        btnSalvar.disabled = false;
+        btnSalvar.innerText = "Salvar Reserva";
+
+        if (result.status === "success") {
+          fecharModalNovaReserva();
+          alert("Reserva adicionada com sucesso! Código: " + result.codigoReserva);
+          if (inputData.value) {
+            carregarReservasPorData(inputData.value);
+          } else {
+            carregarTodasReservas();
+          }
+        } else {
+          if (result.message && (result.message.includes("vaga") || result.message.includes("limite"))) {
+            const confirmarOverride = confirm(result.message + "\n\nDeseja adicionar mesmo assim (fazendo override e ultrapassando o limite de 8)?");
+            if (confirmarOverride) {
+              adicionarReservaManual(null, true);
+              return;
+            }
+          } else {
+            alert(result.message || "Erro ao salvar reserva.");
+          }
+        }
+      } catch (err) {
+        btnSalvar.disabled = false;
+        btnSalvar.innerText = "Salvar Reserva";
+        alert("Erro de conexão ao salvar reserva.");
+      }
+    }
+
+    /* ==========================================================================
+       MODAL DO CALENDÁRIO COM SELEÇÃO DE HORÁRIOS POR DIA
+       ========================================================================== */
+
+    async function carregarDatasLiberadasDoServidor() {
+      try {
+        const response = await fetch(`${API_URL}?action=getDatasLiberadas`);
+        const result = await response.json();
+        if (result.status === "success") {
+          if (result.agendaMap) {
+            agendaLiberadaMap = result.agendaMap;
+          } else if (Array.isArray(result.datasLiberadas)) {
+            // Compatibilidade com formato antigo se houver
+            agendaLiberadaMap = {};
+            result.datasLiberadas.forEach(d => {
+              agendaLiberadaMap[d] = ["12:00", "13:00", "14:00", "15:00", "16:00"];
+            });
+          }
+          atualizarCardsEstatisticasAgenda();
+        }
+      } catch (err) {}
+    }
+
+    function atualizarCardsEstatisticasAgenda() {
+      const datasKeys = Object.keys(agendaLiberadaMap).filter(d => agendaLiberadaMap[d].length > 0);
+      document.getElementById("statDiasCount").innerText = `${datasKeys.length} dia(s)`;
+
+      if (datasKeys.length === 0) {
+        document.getElementById("statProximaData").innerText = "-";
+        document.getElementById("statUltimaData").innerText = "-";
+        return;
+      }
+
+      const datasOrdenadas = datasKeys.map(d => {
+        return { str: d, obj: parseDataPtBr(d) };
+      }).sort((a, b) => a.obj - b.obj);
+
+      const hojeObj = parseDataPtBr(formatarDataIsoParaPtBr(hojeIso));
+      const futuras = datasOrdenadas.filter(d => d.obj >= hojeObj);
+
+      if (futuras.length > 0) {
+        document.getElementById("statProximaData").innerText = futuras[0].str;
+      } else {
+        document.getElementById("statProximaData").innerText = datasOrdenadas[0].str;
+      }
+
+      document.getElementById("statUltimaData").innerText = datasOrdenadas[datasOrdenadas.length - 1].str;
+    }
+
+    function abrirModalCalendario() {
+      document.getElementById("modalCalendario").style.display = "flex";
+      dataSelecionadaNoModal = null;
+      document.getElementById("painelConfigDia").style.display = "none";
+      renderizarGridCalendario();
+    }
+
+    function fecharModalCalendario() {
+      document.getElementById("modalCalendario").style.display = "none";
+      atualizarCardsEstatisticasAgenda();
+    }
+
+    function mudarMesCalendario(delta) {
+      dataCalendarioAtual.setMonth(dataCalendarioAtual.getMonth() + delta);
+      dataSelecionadaNoModal = null;
+      document.getElementById("painelConfigDia").style.display = "none";
+      renderizarGridCalendario();
+    }
+
+    function renderizarGridCalendario() {
+      const grid = document.getElementById("gridDiasCalendario");
+      const labelMesAno = document.getElementById("labelMesAno");
+      grid.innerHTML = "";
+
+      const ano = dataCalendarioAtual.getFullYear();
+      const mes = dataCalendarioAtual.getMonth();
+
+      const nomesMeses = ["Janeiro", "Fevereiro", "Março", "Abril", "Maio", "Junho", "Julho", "Agosto", "Setembro", "Outubro", "Novembro", "Dezembro"];
+      labelMesAno.innerText = `${nomesMeses[mes]} ${ano}`;
+
+      const primeiroDiaSemana = new Date(ano, mes, 1).getDay();
+      const totalDiasNoMes = new Date(ano, mes + 1, 0).getDate();
+
+      for (let i = 0; i < primeiroDiaSemana; i++) {
+        const divEmpty = document.createElement("div");
+        divEmpty.className = "cal-day empty";
+        grid.appendChild(divEmpty);
+      }
+
+      for (let dia = 1; dia <= totalDiasNoMes; dia++) {
+        const diaStr = String(dia).padStart(2, '0');
+        const mesStr = String(mes + 1).padStart(2, '0');
+        const dataPtBr = `${diaStr}/${mesStr}/${ano}`;
+
+        const divDay = document.createElement("div");
+        const temHorarios = agendaLiberadaMap[dataPtBr] && agendaLiberadaMap[dataPtBr].length > 0;
+
+        let classes = "cal-day";
+        if (temHorarios) classes += " active";
+        if (dataSelecionadaNoModal === dataPtBr) classes += " selected-day";
+
+        divDay.className = classes;
+        divDay.innerText = dia;
+
+        divDay.onclick = () => {
+          selecionarDiaNoModal(dataPtBr);
+        };
+
+        grid.appendChild(divDay);
+      }
+    }
+
+    function selecionarDiaNoModal(dataPtBr) {
+      dataSelecionadaNoModal = dataPtBr;
+      renderizarGridCalendario(); // Atualiza borda de seleção no grid
+
+      document.getElementById("tituloDataSelecionada").innerText = `Horários para: ${dataPtBr}`;
+      document.getElementById("painelConfigDia").style.display = "block";
+
+      // Marca/desmarca checkboxes conforme os horários salvos para este dia
+      const horariosAtivos = agendaLiberadaMap[dataPtBr] || [];
+      const checkboxes = document.querySelectorAll("#gridHorariosDia input[type='checkbox']");
+      
+      checkboxes.forEach(cb => {
+        cb.checked = horariosAtivos.includes(cb.value);
+      });
+    }
+
+    function atualizarHorariosDia(checkbox) {
+      if (!dataSelecionadaNoModal) return;
+
+      if (!agendaLiberadaMap[dataSelecionadaNoModal]) {
+        agendaLiberadaMap[dataSelecionadaNoModal] = [];
+      }
+
+      let horarios = agendaLiberadaMap[dataSelecionadaNoModal];
+      const hora = checkbox.value;
+
+      if (checkbox.checked) {
+        if (!horarios.includes(hora)) horarios.push(hora);
+      } else {
+        agendaLiberadaMap[dataSelecionadaNoModal] = horarios.filter(h => h !== hora);
+      }
+
+      // Se remover todos os horários do dia, remove a chave do mapa
+      if (agendaLiberadaMap[dataSelecionadaNoModal].length === 0) {
+        delete agendaLiberadaMap[dataSelecionadaNoModal];
+      }
+
+      renderizarGridCalendario();
+    }
+
+    async function salvarDatasLiberadas() {
+      const btnSalvar = document.getElementById("btnSalvarDatas");
+      btnSalvar.disabled = true;
+      btnSalvar.innerText = "Salvando...";
+
+      try {
+        const payload = {
+          action: "salvarDatasLiberadas",
+          agendaMap: agendaLiberadaMap
+        };
+
+        const response = await fetch(API_URL, {
+          method: "POST",
+          headers: { "Content-Type": "text/plain;charset=utf-8" },
+          body: JSON.stringify(payload)
+        });
+
+        const result = await response.json();
+        btnSalvar.disabled = false;
+        btnSalvar.innerText = "Salvar Alterações";
+
+        if (result.status === "success") {
+          fecharModalCalendario();
+          alert("Agenda e horários salvos com sucesso!");
+        } else {
+          alert("Erro ao salvar agenda.");
+        }
+      } catch (err) {
+        btnSalvar.disabled = false;
+        btnSalvar.innerText = "Salvar Alterações";
+        alert("Erro de conexão ao salvar agenda.");
+      }
+    }
+
+    function parseDataPtBr(strData) {
+      if (!strData) return new Date(0);
+      const p = strData.split("/");
+      if (p.length === 3) {
+        return new Date(p[2], p[1] - 1, p[0]);
+      }
+      return new Date(strData);
+    }
+
+    function formatarDataIsoParaPtBr(strIso) {
+      if (!strIso) return "";
+      const p = strIso.split("-");
+      if (p.length === 3) return `${p[2]}/${p[1]}/${p[0]}`;
+      return strIso;
+    }
+  </script>
+</body>
+</html>
