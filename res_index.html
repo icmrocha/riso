@@ -348,9 +348,9 @@
       </div>
 
       <div class="form-group">
-        <label for="pessoas">Quantidade de pessoas na reserva:</label>
+        <label for="pessoas">Quantidade de pessoas na mesa:</label>
         <select id="pessoas" required disabled onchange="atualizarLotacaoSlots()">
-          <option value="" disabled selected>Selecione a quantidade de pessoas</option>
+          <option value="" disabled selected>Selecione a quantidade</option>
           <option value="1">1 pessoa</option>
           <option value="2">2 pessoas</option>
           <option value="3">3 pessoas</option>
@@ -365,7 +365,7 @@
       <div class="form-group">
         <label>Horário:</label>
         <div class="slots-grid" id="slotsContainer">
-          <div class="helper-text" style="grid-column: span 3;">Selecione uma data no calendário acima.</div>
+          <div class="helper-text" style="grid-column: span 3;">Selecione uma data no calendário e informe a quantidade de pessoas para consultar os horários disponíveis.</div>
         </div>
         <div class="loading-overlay" id="loadingSlots">Consultando horários disponíveis...</div>
         <div class="helper-text" id="slotsHelper" style="display: none; font-weight: 500;"></div>
@@ -395,7 +395,7 @@
   <div class="rules-section" id="rulesSection">
     <ul class="bullets-list">
       <li>Em caso de chuva, sua reserva pode sofrer alterações</li>
-      <li>Em caso de desistência da reserva, pedimos a gentileza de cancelar com até 24h de antecedência via Whatsapp</li>
+      <li>Em caso de desistência ou alterações na reserva, pedimos a gentileza de comunicar com até 24h de antecedência via Whatsapp</li>
       <li>
         Para reservas acima de 8 pessoas, eventos ou dias fora do horário normal de atendimento, entrar em contato via Whatsapp
         <br>
@@ -425,7 +425,7 @@
     <!-- BOTÕES DE AÇÃO DO COMPROVANTE -->
     <div class="voucher-actions">
       <button type="button" class="btn-action primary" onclick="baixarComprovanteImagem()">
-        📸 Salvar no celular (Imagem)
+        📸 Salvar Imagem no celular
       </button>
       <button type="button" class="btn-action" onclick="baixarICS()">
         📅 Salvar no Google Calendar / iCal
