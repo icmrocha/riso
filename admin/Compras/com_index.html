@@ -338,15 +338,13 @@
      * Implementação do Padrão Debounce:
      * Retarda o disparo do envio HTTP enquanto o usuário estiver digitando consecutivamente.
      */
-    function triggerSync() {
+    function triggerSync(itemName) {
       const statusEl = document.getElementById("syncStatus");
       statusEl.innerText = "Aguardando término da digitação...";
-      
-      // Reinicia o temporizador a cada caractere inserido
       clearTimeout(syncTimer);
       syncTimer = setTimeout(() => {
-        syncToCloud("SAVE");
-      }, 800); // Aguarda 800ms de inatividade do teclado
+        syncItemToCloud(itemName);
+      }, 800);
     }
 
     /**
@@ -382,6 +380,40 @@
       });
     }
 
+        function syncItemToCloud(itemName) {
+      if (!itemName) return;
+      const statusEl = document.getElementById("syncStatus");
+      statusEl.innerText = "Salvando na nuvem...";
+      isSaving = true;
+
+      const st = savedState[itemName] || { qty: "", done: false };
+      const isExtra = extraItems.some(e => e.name === itemName);
+
+      fetch(API_URL, {
+        method: "POST",
+        mode: "no-cors",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          action: "SAVE_ITEM",
+          name: itemName,
+          qty: st.qty,
+          done: st.done,
+          isExtra: isExtra
+        })
+      })
+      .then(() => {
+        statusEl.innerText = "✓ Salvo na nuvem";
+        setTimeout(() => {
+          isSaving = false;
+          if (Date.now() - lastQtyEdit >= 8000) loadData();
+        }, 1200);
+      })
+      .catch(() => {
+        statusEl.innerText = "⚠ Erro ao salvar na nuvem";
+        isSaving = false;
+      });
+    }
+
     /* ==========================================================================
        5. MANIPULADORES DE EVENTOS E LÓGICA DE NEGÓCIO
        ========================================================================== */
@@ -412,7 +444,7 @@
         savedState[name] = { qty: "1", done: false }; // Inicializa com quantidade padrão
 
         render();
-        syncToCloud("SAVE");
+              syncItemToCloud(name);
       }
       
       input.value = "";
@@ -426,9 +458,9 @@
       savedState[itemName].qty = val;
       
       // Se a quantidade for esvaziada, reseta a seleção do checkbox
-      if (!val.trim()) {
+      /*if (!val.trim()) {
         savedState[itemName].done = false;
-      }
+      }*/
 
       // Manipulação direta de classe CSS no DOM para performance (sem reconstrução inteira do componente)
       const inputEl = document.getElementById(`qty-${slugify(itemName)}`);
@@ -441,7 +473,7 @@
       }
 
            lastQtyEdit = Date.now();
-      triggerSync();
+      triggerSync(itemName);
     }
 
     /**
@@ -457,7 +489,7 @@
       savedState[itemName].done = !savedState[itemName].done;
       
       render();
-      syncToCloud("SAVE");
+      syncItemToCloud(itemName);
     }
 
     /**

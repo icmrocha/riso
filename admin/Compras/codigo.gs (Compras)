@@ -91,6 +91,36 @@ function doPost(e) {
     // Grava itens ativos e extras
     var stateToSave = contents.savedState || {};
     var extraItems = contents.extraItems || [];
+    if (contents.action === "SAVE_ITEM") {
+      var nome = (contents.name || "").toString().trim();
+      if (!nome) {
+        return ContentService.createTextOutput(JSON.stringify({ status: "error" }))
+          .setMimeType(ContentService.MimeType.JSON);
+      }
+
+      var qtd = contents.qty != null ? contents.qty.toString() : "";
+      var done = contents.done === true || contents.done === "TRUE";
+      var isExtra = contents.isExtra === true || contents.isExtra === "TRUE";
+
+      var dados = sheetCompras.getDataRange().getValues();
+      var achou = false;
+      for (var i = 1; i < dados.length; i++) {
+        if (dados[i][0] && dados[i][0].toString().trim() === nome) {
+          sheetCompras.getRange(i + 1, 2).setValue(qtd);
+          sheetCompras.getRange(i + 1, 3).setValue(done);
+          sheetCompras.getRange(i + 1, 4).setValue(isExtra);
+          achou = true;
+          break;
+        }
+      }
+      if (!achou) {
+        sheetCompras.appendRow([nome, qtd, done, isExtra]);
+      }
+
+      return ContentService.createTextOutput(JSON.stringify({ status: "success" }))
+        .setMimeType(ContentService.MimeType.JSON);
+    }
+
 
     sheetCompras.clearContents();
     sheetCompras.appendRow(["Ingrediente", "Quantidade", "Comprado", "IsExtra"]);
