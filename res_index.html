@@ -101,9 +101,16 @@
       font-size: 1.2rem;
     }
 
+        /* Botão verde; o wrap centraliza mesmo dentro da lista */
+    .btn-whatsapp-wrap {
+      display: block;
+      text-align: center;
+      margin-top: 10px;
+    }
+
     .btn-whatsapp {
       display: inline-block;
-      margin-top: 6px;
+      margin-top: 0;
       padding: 8px 12px;
       background-color: #25d366;
       color: white;
@@ -111,6 +118,19 @@
       border-radius: 6px;
       font-weight: 600;
       font-size: 0.8rem;
+    }
+
+    /* Recado que só aparece quando o select está em 8 */
+    .aviso-grupo {
+      display: none;
+      margin: 8px 0 0 0;
+      font-size: 0.78rem;
+      line-height: 1.35;
+      color: var(--muted);
+    }
+
+    .aviso-grupo.visible {
+      display: block;
     }
 
     .form-container {
@@ -349,7 +369,7 @@
 
       <div class="form-group">
         <label for="pessoas">Quantidade de pessoas na mesa:</label>
-        <select id="pessoas" required disabled onchange="atualizarLotacaoSlots()">
+                <select id="pessoas" required disabled onchange="atualizarLotacaoSlots()" oninput="atualizarLotacaoSlots()">
           <option value="" disabled selected>Selecione a quantidade</option>
           <option value="1">1 pessoa</option>
           <option value="2">2 pessoas</option>
@@ -358,8 +378,12 @@
           <option value="5">5 pessoas</option>
           <option value="6">6 pessoas</option>
           <option value="7">7 pessoas</option>
-          <option value="8">8 pessoas</option>
+          <option value="8">8 pessoas *</option>
         </select>
+        <!-- visível só quando 8 está selecionado; o * na option chama atenção -->
+        <p id="avisoGrupo" class="aviso-grupo">
+          * Para grupos com mais de 8 pessoas, favor entrar em contato.
+        </p>
       </div>
 
       <div class="form-group">
@@ -399,7 +423,9 @@
       <li>
         Para reservas acima de 8 pessoas, eventos ou dias fora do horário normal de atendimento, entrar em contato via Whatsapp
         <br>
-        <a href="https://wa.me/5524992438242" target="_blank" class="btn-whatsapp">Falar no WhatsApp</a>
+                <span class="btn-whatsapp-wrap">
+          <a href="https://wa.me/5524992438242" target="_blank" class="btn-whatsapp">Falar no WhatsApp</a>
+        </span>
       </li>
     </ul>
   </div>
@@ -501,7 +527,6 @@
       }
 
       selectPessoas.disabled = false;
-      selectPessoas.value = "";
 
       try {
         const response = await fetch(`${API_URL}?data=${dataVal}`);
@@ -509,9 +534,15 @@
 
         loading.style.display = "none";
 
-        if (result.status === "success") {
+if (result.status === "success") {
           vagasDoDia = result.disponibilidade;
-          slotsContainer.innerHTML = `<div class="helper-text" style="grid-column: span 3;">Aguardando você selecionar a quantidade de pessoas acima...</div>`;
+          // Se o número de pessoas já está escolhido, desenha os horários
+          // na hora. Evita o bug do "Aguardando..." com o select preenchido.
+          if (selectPessoas.value) {
+            atualizarLotacaoSlots();
+          } else {
+            slotsContainer.innerHTML = `<div class="helper-text" style="grid-column: span 3;">Aguardando você selecionar a quantidade de pessoas acima...</div>`;
+          }
         } else {
           slotsContainer.innerHTML = `<div class="helper-text" style="color:#ef4444; grid-column: span 3;">Erro ao carregar horários. Tente novamente.</div>`;
         }
@@ -527,6 +558,10 @@
       const numPessoasVal = document.getElementById("pessoas").value;
       const slotsContainer = document.getElementById("slotsContainer");
       const helper = document.getElementById("slotsHelper");
+            const avisoGrupo = document.getElementById("avisoGrupo");
+      if (avisoGrupo) {
+        avisoGrupo.classList.toggle("visible", numPessoasVal === "8");
+      }
 
       if (!numPessoasVal) {
         slotsContainer.innerHTML = `<div class="helper-text" style="grid-column: span 3;">Selecione a quantidade de pessoas acima.</div>`;
