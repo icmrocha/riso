@@ -9,15 +9,22 @@ function doGet(e) {
   const dadosLog = abaLog ? abaLog.getDataRange().getValues() : [];
   if (dadosLog.length > 0) dadosLog.shift(); // Remove cabeçalho
 
-  // Mapeia a ÚLTIMA marcação de cada tarefa (sobrescrevendo registros antigos)
+  // Só as marcações DESTE ciclo (id que o celular manda na URL).
+  // Sem isso, o último CONCLUIDO de qualquer sábado volta na tela.
+  const idPedido = e && e.parameter && e.parameter.idServico
+    ? String(e.parameter.idServico)
+    : "";
+
   const statusMap = {};
   dadosLog.forEach(linha => {
     const [idServico, categoria, tarefa, tag, status, horario] = linha;
     if (!categoria || !tarefa) return;
+    if (idPedido && String(idServico) !== idPedido) return;
 
     const chave = `${categoria}_${tarefa}`;
+    const feito = status === "CONCLUIDO" || status === "TRUE" || status === true;
     statusMap[chave] = {
-      done: status === "CONCLUIDO",
+      done: feito,
       completedAt: horario || ""
     };
   });
@@ -63,7 +70,11 @@ function doPost(e) {
       return ContentService.createTextOutput(JSON.stringify({ status: "sucesso" }))
         .setMimeType(ContentService.MimeType.JSON);
     }
-
+// Novo ciclo: o HTML já trocou o idServico. Não precisa apagar o LOG.
+    if (dadosRecebidos.acao === "RESET") {
+      return ContentService.createTextOutput(JSON.stringify({ status: "sucesso" }))
+        .setMimeType(ContentService.MimeType.JSON);
+    }
     // Ação 2: Gravar marcação de status na aba LOG
     const abaLog = ss.getSheetByName("LOG");
     const { idServico, categoria, tarefa, tag, status, horarioConclusao } = dadosRecebidos;
@@ -73,7 +84,7 @@ function doPost(e) {
       categoria,
       tarefa,
       tag,
-      status ? "CONCLUIDO" : "PENDENTE",
+            (status === true || status === "TRUE" || status === "CONCLUIDO") ? "CONCLUIDO" : "PENDENTE",
       horarioConclusao || ""
     ]);
 
