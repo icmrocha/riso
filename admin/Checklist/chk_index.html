@@ -665,9 +665,47 @@ async function fetchMasterFromSheets() {
       const [movedTask] = state[draggedItem.catIdx].tasks.splice(draggedItem.taskIdx, 1);
       state[targetCatIdx].tasks.splice(targetTaskIdx, 0, movedTask);
 
-      saveState();
+            saveState();
       render();
+      lastLocalUpdate = Date.now();
+      salvarOrdemNoSheets();
     }
+
+    function salvarOrdemNoSheets() {
+      const statusEl = document.getElementById("syncStatus");
+      statusEl.innerText = "Salvando ordem...";
+      isSyncing = true;
+
+      const itens = [];
+      state.forEach(function (cat) {
+        cat.tasks.forEach(function (t) {
+          itens.push({
+            categoria: cat.category,
+            tarefa: t.text,
+            tag: t.tag || "Cozinha"
+          });
+        });
+      });
+
+      fetch(API_URL, {
+        method: "POST",
+        mode: "no-cors",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          acao: "SALVAR_ORDEM",
+          itens: itens
+        })
+      })
+      .then(function () {
+        statusEl.innerText = "✓ Ordem salva";
+        setTimeout(function () { isSyncing = false; }, 4000);
+      })
+      .catch(function () {
+        statusEl.innerText = "⚠ Ordem só neste aparelho";
+        isSyncing = false;
+      });
+    }
+
 
     /* ==========================================================================
        10. INICIALIZAÇÃO

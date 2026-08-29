@@ -2,52 +2,92 @@ function doGet(e) {
   const ss = SpreadsheetApp.getActiveSpreadsheet();
   const abaMaster = ss.getSheetByName("MASTER");
   const abaLog = ss.getSheetByName("LOG");
-  
+
   const dadosMaster = abaMaster.getDataRange().getValues();
-  dadosMaster.shift(); // Remove cabeçalho
+  dadosMaster.shift();
 
   const dadosLog = abaLog ? abaLog.getDataRange().getValues() : [];
-  if (dadosLog.length > 0) dadosLog.shift(); // Remove cabeçalho
+  if (dadosLog.length > 0) dadosLog.shift();
 
-  // Só as marcações DESTE ciclo (id que o celular manda na URL).
-  // Sem isso, o último CONCLUIDO de qualquer sábado volta na tela.
-  // A comanda da casa fica no Script (não no localStorage de cada celular).
-  const idPedido = PropertiesService.getScriptProperties().getProperty("cicloAtual") || "";
+  const cicloAtual = PropertiesService.getScriptProperties().getProperty("cicloAtual") || "";
 
   const statusMap = {};
-  dadosLog.forEach(linha => {
-    const [idServico, categoria, tarefa, tag, status, horario] = linha;
+  dadosLog.forEach(function (linha) {
+    const idServico = linha[0];
+    const categoria = linha[1];
+    const tarefa = linha[2];
+    const status = linha[4];
+    const horario = linha[5];
     if (!categoria || !tarefa) return;
-    if (idPedido && String(idServico) !== idPedido) return;
+    if (cicloAtual && String(idServico) !== String(cicloAtual)) return;
 
-    const chave = `${categoria}_${tarefa}`;
     const feito = status === "CONCLUIDO" || status === "TRUE" || status === true;
-    statusMap[chave] = {
-      done: feito,
-      completedAt: horario || ""
-    };
+    const info = { done: feito, completedAt: horario || "" };
+    statusMap[categoria + "_" + tarefa] = info;
+    statusMap[tarefa] = info;
   });
 
-  const categoriasMap = {};
-
-  dadosMaster.forEach(linha => {
-    const [categoria, tarefa, tag] = linha;
+  const masterPorChave = {};
+  const masterLista = [];
+  dadosMaster.forEach(function (linha) {
+    const categoria = linha[0];
+    const tarefa = linha[1];
+    const tag = linha[2] || "Cozinha";
     if (!categoria || !tarefa) return;
+    const chave = categoria + "_" + tarefa;
+    masterPorChave[chave] = { categoria: categoria, tarefa: tarefa, tag: tag };
+    masterLista.push(chave);
+  });
 
+  const ordemDoDia = [];
+  const abaOrdem = ss.getSheetByName("ORDEM_CICLO");
+  if (abaOrdem && cicloAtual) {
+    const dadosOrdem = abaOrdem.getDataRange().getValues();
+    dadosOrdem.shift();
+    dadosOrdem.forEach(function (linha) {
+      if (String(linha[0]) !== String(cicloAtual)) return;
+      if (!linha[1] || !linha[2]) return;
+      ordemDoDia.push({
+        categoria: linha[1],
+        tarefa: linha[2],
+        tag: linha[3] || "Cozinha"
+      });
+    });
+  }
+
+  const categoriasMap = {};
+  const usados = {};
+
+  function adicionar(categoria, tarefa, tag) {
     if (!categoriasMap[categoria]) {
       categoriasMap[categoria] = { category: categoria, tasks: [] };
     }
-
-    const chave = `${categoria}_${tarefa}`;
-    const logExistente = statusMap[chave];
-
+    const logExistente = statusMap[categoria + "_" + tarefa] || statusMap[tarefa] || null;
     categoriasMap[categoria].tasks.push({
       text: tarefa,
       tag: tag || "Cozinha",
       done: logExistente ? logExistente.done : false,
       completedAt: logExistente ? logExistente.completedAt : ""
     });
-  });
+  }
+
+  if (ordemDoDia.length > 0) {
+    ordemDoDia.forEach(function (item) {
+      adicionar(item.categoria, item.tarefa, item.tag);
+      usados[item.categoria + "_" + item.tarefa] = true;
+      usados[item.tarefa] = true;
+    });
+    masterLista.forEach(function (chave) {
+      const m = masterPorChave[chave];
+      if (usados[chave] || usados[m.tarefa]) return;
+      adicionar(m.categoria, m.tarefa, m.tag);
+    });
+  } else {
+    masterLista.forEach(function (chave) {
+      const m = masterPorChave[chave];
+      adicionar(m.categoria, m.tarefa, m.tag);
+    });
+  }
 
   return ContentService.createTextOutput(JSON.stringify(Object.values(categoriasMap)))
     .setMimeType(ContentService.MimeType.JSON);
@@ -76,6 +116,32 @@ function doPost(e) {
       return ContentService.createTextOutput(JSON.stringify({ status: "sucesso" }))
         .setMimeType(ContentService.MimeType.JSON);
     }
+        if (dadosRecebidos.acao === "SALVAR_ORDEM") {
+      const ciclo = PropertiesService.getScriptProperties().getProperty("cicloAtual")
+        || dadosRecebidos.idServico
+        || "";
+      const aba = ss.getSheetByName("ORDEM_CICLO") || ss.insertSheet("ORDEM_CICLO");
+      if (aba.getLastRow() === 0) {
+        aba.appendRow(["idCiclo", "categoria", "tarefa", "tag", "posicao"]);
+      }
+
+      const itens = dadosRecebidos.itens || [];
+      const dados = aba.getDataRange().getValues();
+      // Apaga só as linhas DESTE ciclo (de baixo para cima).
+      for (let i = dados.length; i >= 2; i--) {
+        if (String(dados[i - 1][0]) === String(ciclo)) {
+          aba.deleteRow(i);
+        }
+      }
+      itens.forEach(function (item, idx) {
+        aba.appendRow([ciclo, item.categoria, item.tarefa, item.tag || "Cozinha", idx + 1]);
+      });
+
+      return ContentService.createTextOutput(JSON.stringify({ status: "sucesso" }))
+        .setMimeType(ContentService.MimeType.JSON);
+    }
+
+    
     // Ação 2: Gravar marcação de status na aba LOG
     const abaLog = ss.getSheetByName("LOG");
     const { idServico, categoria, tarefa, tag, status, horarioConclusao } = dadosRecebidos;
