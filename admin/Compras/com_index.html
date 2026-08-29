@@ -287,6 +287,7 @@
     let savedState = {};        // Hashmap de quantidades e checkboxes: { "Insumo": { qty: "2kg", done: true } }
     let isSaving = false;       // Flag de trava/mutex para operações de I/O em andamento
     let syncTimer = null;       // Referência de timer para o mecanismo de Debounce
+    let lastQtyEdit = 0;        // último toque no campo quantidade
 
     // FLAGS DE ESTADO DE INTERFACE (UI STATES)
     let filterOnlyToBuy = false;
@@ -302,19 +303,21 @@
      * Implementa 'Guards' contra sobrescrita durante digitação do usuário.
      */
     async function loadData() {
-      // GUARD 1: Se um input de texto estiver focado, ignora o re-render automático para não travar o teclado
       const activeElement = document.activeElement;
       if (activeElement && activeElement.tagName === "INPUT" && activeElement.type === "text") {
         return;
       }
-
-      // GUARD 2: Se uma gravação (POST) estiver em curso, adia a leitura para evitar Race Conditions
       if (isSaving) return;
+      if (Date.now() - lastQtyEdit < 8000) return;
 
+      const iniciadoEm = Date.now();
       const statusEl = document.getElementById("syncStatus");
       try {
         const response = await fetch(API_URL);
         const data = await response.json();
+
+        if (lastQtyEdit >= iniciadoEm) return;
+        if (Date.now() - lastQtyEdit < 8000) return;
         
         if (data.masterList && Array.isArray(data.masterList)) {
           rawData = data.masterList;
@@ -367,10 +370,10 @@
       })
       .then(() => {
         statusEl.innerText = "✓ Salvo na nuvem";
-        setTimeout(() => { 
+        setTimeout(() => {
           isSaving = false;
-          // Executa releitura assim que a gravação é concluída para sincronizar a sessão
-          loadData();
+          // Quantidade: não relê na hora (o GET ainda pode vir sem o que você digitou).
+          if (Date.now() - lastQtyEdit >= 8000) loadData();
         }, 1200);
       })
       .catch(err => {
@@ -437,7 +440,8 @@
         }
       }
 
-      triggerSync(); // Dispara o debounce
+           lastQtyEdit = Date.now();
+      triggerSync();
     }
 
     /**
