@@ -313,11 +313,12 @@
     /* ==========================================================================
        6. COMUNICAÇÃO COM O GOOGLE SHEETS
        ========================================================================== */
-    async function fetchMasterFromSheets() {
-      // Bloqueia a leitura do servidor se o usuário alterou algo nos últimos 6 segundos.
-      // Isso evita que o cache atrasado do Google Sheets sobrescreva a tela.
-      if (Date.now() - lastLocalUpdate < 6000) return;
+async function fetchMasterFromSheets() {
+      // Não começa leitura se acabamos de marcar algo (Sheets atrasa).
+      if (Date.now() - lastLocalUpdate < 12000) return;
       if (isSyncing) return;
+
+      const iniciadoEm = Date.now();
 
       const statusEl = document.getElementById("syncStatus");
 
@@ -326,6 +327,10 @@
         const urlComAntiCache = `${API_URL}?idServico=${idServicoAtual}&t=${Date.now()}`;
         const response = await fetch(urlComAntiCache);
         const data = await response.json();
+
+        // A resposta saiu ANTES do clique: joga fora. Senão o tick some.
+        if (lastLocalUpdate >= iniciadoEm) return;
+        if (Date.now() - lastLocalUpdate < 12000) return;
 
         if (Array.isArray(data) && data.length > 0) {
           state = data.map((cat, catIdx) => ({
