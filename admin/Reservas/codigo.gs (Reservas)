@@ -61,6 +61,34 @@ function doPost(e) {
       props.setProperty("ajudantesPorData", JSON.stringify(mapa));
       return respostaJSON({ status: "success" });
     }
+
+        if (action === "editarReserva") {
+      const sheet = SpreadsheetApp.openById(SPREADSHEET_ID).getSheetByName(SHEET_RESERVAS);
+      const dados = sheet.getDataRange().getValues();
+      const codigoAlvo = String(payload.codigoReserva || "").trim();
+      let linha = -1;
+      for (let i = 1; i < dados.length; i++) {
+        const c7 = String(dados[i][6]).trim();
+        const c9 = String(dados[i][8] || dados[i][6]).trim();
+        if (c7 === codigoAlvo || c9 === codigoAlvo) { linha = i + 1; break; }
+      }
+      if (linha === -1) {
+        return respostaJSON({ status: "error", message: "Reserva não encontrada." });
+      }
+      const dataAlvo = normalizarDataParaPtBr(payload.dataReserva);
+      const horario = normalizarHorario(payload.horario);
+      const pessoas = Number(payload.pessoas) || 0;
+      if (!dataAlvo || !horario || pessoas <= 0) {
+        return respostaJSON({ status: "error", message: "Dados inválidos." });
+      }
+      sheet.getRange(linha, 1).setValue("'" + dataAlvo);
+      sheet.getRange(linha, 2).setValue("'" + horario);
+      sheet.getRange(linha, 3).setValue(payload.nome || "");
+      sheet.getRange(linha, 4).setValue("'" + String(payload.telefone || ""));
+      sheet.getRange(linha, 5).setValue(pessoas);
+      sheet.getRange(linha, 6).setValue(payload.observacoes || "Nenhuma");
+      return respostaJSON({ status: "success" });
+    }
       let linhaEncontrada = -1;
 
     

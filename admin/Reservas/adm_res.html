@@ -622,7 +622,7 @@
   <div class="modal-overlay" id="modalNovaReserva">
     <div class="modal-card" style="max-width: 480px;">
       <div class="modal-header">
-        <h2>Nova Reserva (Manual)</h2>
+                <h2 id="tituloModalReserva">Nova Reserva (Manual)</h2>
         <button class="btn-action-icon" onclick="fecharModalNovaReserva()">✕</button>
       </div>
       <form id="formNovaReserva" onsubmit="adicionarReservaManual(event)">
@@ -654,20 +654,8 @@
         </div>
         <div class="modal-form-group">
           <label for="admPessoas">Quantidade de Pessoas:</label>
-          <select id="admPessoas" required>
-            <option value="1">1 pessoa</option>
-            <option value="2" selected>2 pessoas</option>
-            <option value="3">3 pessoas</option>
-            <option value="4">4 pessoas</option>
-            <option value="5">5 pessoas</option>
-            <option value="6">6 pessoas</option>
-            <option value="7">7 pessoas</option>
-            <option value="8">8 pessoas</option>
-            <option value="9">9 pessoas (Override)</option>
-            <option value="10">10 pessoas (Override)</option>
-            <option value="12">12 pessoas (Override)</option>
-            <option value="15">15 pessoas (Override)</option>
-          </select>
+          <input type="number" id="admPessoas" required min="1" step="1" value="2">
+          <input type="hidden" id="admEditCodigo" value="">
         </div>
         <div class="modal-form-group">
           <label for="admObs">Observações / Alergias:</label>
@@ -928,7 +916,7 @@
                     <th>Telefone</th>
                     <th>Pessoas</th>
                     <th>Observações / Alergias</th>
-                    <th style="width: 60px; text-align: center;">Ações</th>
+                    <th style="width: 90px; text-align: center;">Ações</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -961,8 +949,16 @@
                 <td style="text-align: center;">
                   ${ehCancelada ? 
                     `<button class="btn-action-icon" title="Reabrir Reserva" onclick="alterarStatusReserva('${res.codigoOriginal}', 'REABRIR')">🔄</button>` : 
-                    `<button class="btn-action-icon" title="Cancelar Reserva" onclick="alterarStatusReserva('${res.codigo}', 'CANCELADA')">🗑️</button>`
-                  }
+                    `<button class="btn-action-icon" title="Editar Reserva" onclick="abrirEditarReserva(this)"
+                      data-codigo="${res.codigoOriginal || res.codigo}"
+                      data-nome="${String(res.nome || "").replace(/"/g, '&quot;')}"
+                      data-telefone="${res.telefone || ""}"
+                      data-data="${res.data || ""}"
+                      data-horario="${res.horario || ""}"
+                      data-pessoas="${res.pessoas || ""}"
+                      data-obs="${String(res.observacoes || "").replace(/"/g, '&quot;')}"
+                    >✏️</button>
+                    <button class="btn-action-icon" title="Cancelar Reserva" onclick="alterarStatusReserva('${res.codigo}', 'CANCELADA')">🗑️</button>`                  }
                 </td>
               </tr>
             `;
@@ -1022,7 +1018,7 @@
                   <th>Telefone</th>
                   <th>Pessoas</th>
                   <th>Observações / Alergias</th>
-                  <th style="width: 60px; text-align: center;">Ações</th>
+                  <th style="width: 90px; text-align: center;">Ações</th>
                 </tr>
               </thead>
               <tbody>
@@ -1055,7 +1051,16 @@
               <td style="text-align: center;">
                 ${ehCancelada ? 
                   `<button class="btn-action-icon" title="Reabrir Reserva" onclick="alterarStatusReserva('${res.codigoOriginal}', 'REABRIR')">🔄</button>` : 
-                  `<button class="btn-action-icon" title="Cancelar Reserva" onclick="alterarStatusReserva('${res.codigo}', 'CANCELADA')">🗑️</button>`
+                                      `<button class="btn-action-icon" title="Editar Reserva" onclick="abrirEditarReserva(this)"
+                      data-codigo="${res.codigoOriginal || res.codigo}"
+                      data-nome="${String(res.nome || "").replace(/"/g, '&quot;')}"
+                      data-telefone="${res.telefone || ""}"
+                      data-data="${res.data || ""}"
+                      data-horario="${res.horario || ""}"
+                      data-pessoas="${res.pessoas || ""}"
+                      data-obs="${String(res.observacoes || "").replace(/"/g, '&quot;')}"
+                    >✏️</button>
+                    <button class="btn-action-icon" title="Cancelar Reserva" onclick="alterarStatusReserva('${res.codigo}', 'CANCELADA')">🗑️</button>`
                 }
               </td>
             </tr>
@@ -1099,6 +1104,9 @@
 
     /* MODAL DE ADICIONAR RESERVA MANUALMENTE */
     function abrirModalNovaReserva() {
+      document.getElementById("tituloModalReserva").innerText = "Nova Reserva (Manual)";
+      document.getElementById("admEditCodigo").value = "";
+      document.getElementById("formNovaReserva").reset();
       document.getElementById("modalNovaReserva").style.display = "flex";
       document.getElementById("admData").value = inputData.value || hojeIso;
     }
@@ -1106,6 +1114,27 @@
     function fecharModalNovaReserva() {
       document.getElementById("modalNovaReserva").style.display = "none";
       document.getElementById("formNovaReserva").reset();
+      document.getElementById("admEditCodigo").value = "";
+      document.getElementById("tituloModalReserva").innerText = "Nova Reserva (Manual)";
+    }
+
+    function dataPtBrParaIso(str) {
+      const p = String(str || "").split("/");
+      if (p.length !== 3) return "";
+      return p[2] + "-" + p[1].padStart(2, "0") + "-" + p[0].padStart(2, "0");
+    }
+
+    function abrirEditarReserva(botao) {
+      document.getElementById("tituloModalReserva").innerText = "Editar Reserva";
+      document.getElementById("admEditCodigo").value = botao.dataset.codigo || "";
+      document.getElementById("admNome").value = botao.dataset.nome || "";
+      document.getElementById("admTelefone").value = botao.dataset.telefone || "";
+      document.getElementById("admData").value = dataPtBrParaIso(botao.dataset.data);
+      document.getElementById("admHorario").value = botao.dataset.horario || "";
+      document.getElementById("admPessoas").value = botao.dataset.pessoas || 2;
+      const obs = botao.dataset.obs || "";
+      document.getElementById("admObs").value = (obs === "Nenhuma" || obs.indexOf("Reserva inserida manualmente") === 0) ? "" : obs;
+      document.getElementById("modalNovaReserva").style.display = "flex";
     }
 
     async function adicionarReservaManual(e, override = false) {
@@ -1115,6 +1144,9 @@
       btnSalvar.innerText = "Salvando...";
 
       const payload = {
+                action: document.getElementById("admEditCodigo").value ? "editarReserva" : undefined,
+        codigoReserva: document.getElementById("admEditCodigo").value,
+        override: true,
         nome: document.getElementById("admNome").value.trim(),
         telefone: document.getElementById("admTelefone").value.trim(),
         dataReserva: document.getElementById("admData").value,
@@ -1137,7 +1169,7 @@
 
         if (result.status === "success") {
           fecharModalNovaReserva();
-          alert("Reserva adicionada com sucesso! Código: " + result.codigoReserva);
+          alert(codigoEdit ? "Reserva atualizada." : ("Reserva adicionada com sucesso! Código: " + result.codigoReserva));
           if (inputData.value) {
             carregarReservasPorData(inputData.value);
           } else {
