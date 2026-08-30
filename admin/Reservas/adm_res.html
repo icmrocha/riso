@@ -351,9 +351,10 @@
       letter-spacing: -0.02em;
     }
     .date-section-title .dia-num {
-      font-size: 1.05rem;
-      font-weight: 600;
-      color: var(--muted);
+      font-size: 1.45rem;
+      font-weight: 800;
+      letter-spacing: -0.02em;
+      color: var(--text);
     }
     .date-section-title .tag-hoje {
       font-size: 0.7rem;
@@ -768,6 +769,7 @@
         const result = await response.json();
 
         if (result.reservas) {
+          mapaAjudantes = result.ajudantes || {};
           let lista = result.reservas;
           if (ocultarPassadas) {
             const hojeDataObj = parseDataPtBr(formatarDataIsoParaPtBr(hojeIso));
@@ -880,7 +882,7 @@
         const ehHoje = dataStr === formatarDataIsoParaPtBr(hojeIso);
 
         dateTitle.innerHTML = `
-          <span class="dia-nome">${nomeDia}${ehFds ? " ☀️" : ""}</span>
+          <span class="dia-nome">${nomeDia}</span>
           <span class="dia-num">${dataStr}</span>
           ${ehHoje ? '<span class="tag-hoje">hoje</span>' : ""}
           <span class="ajudantes">
