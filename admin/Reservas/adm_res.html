@@ -336,15 +336,55 @@
 
     /* SEÇÕES DE DATA E HORÁRIO */
     .date-section-title {
-      font-size: 1.1rem;
+      display: flex;
+      flex-wrap: wrap;
+      align-items: baseline;
+      gap: 10px 16px;
+      margin: 28px 0 12px 0;
+      padding-bottom: 10px;
+      border-bottom: 3px solid var(--primary);
+      color: var(--text);
+    }
+    .date-section-title .dia-nome {
+      font-size: 1.45rem;
+      font-weight: 800;
+      letter-spacing: -0.02em;
+    }
+    .date-section-title .dia-num {
+      font-size: 1.05rem;
+      font-weight: 600;
+      color: var(--muted);
+    }
+    .date-section-title .tag-hoje {
+      font-size: 0.7rem;
       font-weight: 700;
-      margin: 24px 0 12px 0;
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+      background: var(--primary);
+      color: #fff;
+      border-radius: 999px;
+      padding: 3px 8px;
+    }
+    .date-section-title .ajudantes {
+      flex: 1 1 180px;
       display: flex;
       align-items: center;
       gap: 8px;
-      color: var(--text);
-      border-bottom: 2px solid var(--border);
-      padding-bottom: 6px;
+      min-width: 180px;
+    }
+    .date-section-title .ajudantes label {
+      font-size: 0.75rem;
+      font-weight: 700;
+      color: var(--muted);
+      white-space: nowrap;
+    }
+    .date-section-title .ajudantes input {
+      flex: 1;
+      min-width: 0;
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 6px 10px;
+      font-size: 0.9rem;
     }
 
     .time-section {
@@ -648,6 +688,7 @@
     let agendaLiberadaMap = {}; // Ex: {"29/08/2026": ["12:00", "13:00"]}
     let dataCalendarioAtual = new Date();
     let dataSelecionadaNoModal = null; // Data no formato DD/MM/AAAA sendo editada no modal
+    let mapaAjudantes = {};
 
     const inputData = document.getElementById("dataConsulta");
     const hojeIso = new Date().toISOString().split("T")[0];
@@ -655,6 +696,22 @@
     inputData.value = "";
     carregarTodasReservas();
     carregarDatasLiberadasDoServidor();
+
+        function salvarAjudantesDoDia(input) {
+      const data = input.dataset.data;
+      const nomes = input.value.trim();
+      mapaAjudantes[data] = nomes;
+      fetch(API_URL, {
+        method: "POST",
+        mode: "no-cors",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          action: "salvarAjudantes",
+          data: data,
+          nomes: nomes
+        })
+      });
+    }
 
     function aplicarMascaraTelefone(input) {
       let valor = input.value.replace(/\D/g, "");
@@ -815,7 +872,24 @@
         
         const dateTitle = document.createElement("div");
         dateTitle.className = "date-section-title";
-        dateTitle.innerText = `Data: ${dataStr}`;
+
+        const dt = parseDataPtBr(dataStr);
+        const nomes = ["Domingo","Segunda","Terça","Quarta","Quinta","Sexta","Sábado"];
+        const nomeDia = nomes[dt.getDay()];
+        const ehFds = dt.getDay() === 0 || dt.getDay() === 6;
+        const ehHoje = dataStr === formatarDataIsoParaPtBr(hojeIso);
+
+        dateTitle.innerHTML = `
+          <span class="dia-nome">${nomeDia}${ehFds ? " ☀️" : ""}</span>
+          <span class="dia-num">${dataStr}</span>
+          ${ehHoje ? '<span class="tag-hoje">hoje</span>' : ""}
+          <span class="ajudantes">
+            <label>Ajudantes</label>
+            <input type="text" data-data="${dataStr}" placeholder="Quem trabalha neste dia"
+              value="${(mapaAjudantes[dataStr] || "").replace(/"/g, "&quot;")}"
+              onchange="salvarAjudantesDoDia(this)">
+          </span>
+        `;
         containerReservas.appendChild(dateTitle);
 
         const gruposHorario = {};

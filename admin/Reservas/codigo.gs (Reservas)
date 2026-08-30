@@ -7,7 +7,7 @@ const SHEET_RESERVAS = "Reservas_Ativas";
 const SHEET_DATAS_LIBERADAS = "Datas_Liberadas";
 const MAX_CAPACIDADE_POR_HORA = 8;
 
-const N8N_WEBHOOK_URL = "https://seu-n8n.com/webhook/reserva-riso"; 
+const N8N_WEBHOOK_URL = ""; 
 
 function obterOuCriarAba(nomeAba) {
   const ss = SpreadsheetApp.openById(SPREADSHEET_ID);
@@ -53,6 +53,7 @@ function doPost(e) {
 
       return respostaJSON({ status: "success", message: "Agenda e horários salvos com sucesso!" });
     }
+      let linhaEncontrada = -1;
 
     // AÇÃO 2: ATUALIZAR STATUS DA RESERVA (REALIZADA / CANCELADA / REABRIR)
     if (action === "atualizarStatusReserva") {
@@ -216,7 +217,15 @@ function doGet(e) {
           });
         }
       }
-      return respostaJSON({ status: "success", reservas: todasReservas });
+            const ajudantes = JSON.parse(
+        PropertiesService.getScriptProperties().getProperty("ajudantesPorData") || "{}"
+      );
+      return respostaJSON({
+        status: "success",
+        reservas: todasReservas,
+        ajudantes: ajudantes
+      });
+      
     }
 
     const dataConsultaRaw = e.parameter.data;
