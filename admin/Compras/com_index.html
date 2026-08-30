@@ -235,6 +235,14 @@
       color: var(--muted);
       font-size: 0.95rem;
     }
+    #contagemCompras {
+      display: none;
+      text-align: center;
+      font-size: 1.15rem;
+      font-weight: 700;
+      margin: 0 0 12px 0;
+      color: var(--text);
+    }
   </style>
 </head>
 <body>
@@ -247,6 +255,8 @@
   <h1>Controle de Compras</h1>
   <!-- ÁREA DE FEEDBACK EM TEMPO REAL SOBRE SINCRONIZAÇÃO COM A API -->
   <div id="syncStatus" class="sync-status">Sincronizando...</div>
+
+  <div id="contagemCompras"></div>
 
   <div class="top-bar">
     <!-- INPUT DE BUSCA INSTANTÂNEA -->
@@ -479,6 +489,7 @@ if (inputEl) {
 
            lastQtyEdit = Date.now();
       triggerSync(itemName);
+      atualizarContagem();
     }
 
     /**
@@ -560,9 +571,32 @@ if (inputEl) {
       }, {});
     }
 
+    function atualizarContagem() {
+      const el = document.getElementById("contagemCompras");
+      if (!el) return;
+      let total = 0;
+      let feitos = 0;
+      Object.keys(savedState).forEach(function (nome) {
+        const st = savedState[nome];
+        if (!st || !st.qty || !String(st.qty).trim()) return;
+        total += 1;
+        if (st.done) feitos += 1;
+      });
+      if (total === 0) {
+        el.style.display = "none";
+        el.innerText = "";
+        return;
+      }
+      el.style.display = "block";
+      el.innerText = feitos + "/" + total + " itens";
+    }
+
+
     /* ==========================================================================
        6. MOTOR DE RENDERIZAÇÃO DO DOM (DOM RENDER ENGINE)
        ========================================================================== */
+
+
     function render() {
       const container = document.getElementById("itemsContainer");
       container.innerHTML = "";
@@ -621,6 +655,7 @@ if (inputEl) {
           container.appendChild(catDiv);
         }
       }
+      atualizarContagem();
     }
 
     /**
