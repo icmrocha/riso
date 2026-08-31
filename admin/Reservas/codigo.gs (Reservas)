@@ -482,7 +482,7 @@ function sincronizarCalendarioDoDia(dataPtBr) {
     const props = PropertiesService.getScriptProperties();
     const mapa = JSON.parse(props.getProperty("calEventosPorData") || "{}");
     const eventId = mapa[dataPtBr] || "";
-    const cal = CalendarApp.getDefaultCalendar();
+    const cal = obterCalendarioRiso();
 
     // Dia só com canceladas (ou vazio): tira o evento da parede.
     if (totalPessoas <= 0) {
@@ -527,6 +527,16 @@ function sincronizarCalendarioDoDia(dataPtBr) {
   } catch (err) {
     console.error("Calendario: " + err);
   }
+}
+
+/*Funcao de obter calendario da Riso pra atualizar*/
+function obterCalendarioRiso() {
+  const id = PropertiesService.getScriptProperties().getProperty("CALENDAR_ID");
+  if (id) {
+    const cal = CalendarApp.getCalendarById(id);
+    if (cal) return cal;
+  }
+  return CalendarApp.getDefaultCalendar();
 }
 
 function dataHoraSp(dataPtBr, hhmm) {
