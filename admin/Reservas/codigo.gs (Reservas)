@@ -541,6 +541,16 @@ function sincronizarCalendarioDoDia(dataPtBr) {
   }
 }
 
+/*Funcao de obter calendario da Riso pra atualizar*/
+function obterCalendarioRiso() {
+  const id = PropertiesService.getScriptProperties().getProperty("CALENDAR_ID");
+  if (id) {
+    const cal = CalendarApp.getCalendarById(id);
+    if (cal) return cal;
+  }
+  return CalendarApp.getDefaultCalendar();
+}
+
 function dataHoraSp(dataPtBr, hhmm) {
   const p = String(dataPtBr).split("/");
   const h = String(hhmm).split(":");
