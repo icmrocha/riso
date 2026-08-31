@@ -448,6 +448,18 @@ function respostaJSON(objeto) {
  *
  * Se o Calendar falhar, a reserva na planilha já foi gravada. Engolimos o erro.
  */
+
+function obterCalendarioRiso() {
+  const id = PropertiesService.getScriptProperties().getProperty("CALENDAR_ID");
+  if (id) {
+    const cal = CalendarApp.getCalendarById(id.trim());
+    if (cal) return cal;
+  }
+  // Sem id válido, cai na pessoal — é o que está acontecendo agora.
+  return CalendarApp.getDefaultCalendar();
+}
+
+
 function sincronizarCalendarioDoDia(dataPtBr) {
   try {
     if (!dataPtBr) return;
@@ -482,7 +494,7 @@ function sincronizarCalendarioDoDia(dataPtBr) {
     const props = PropertiesService.getScriptProperties();
     const mapa = JSON.parse(props.getProperty("calEventosPorData") || "{}");
     const eventId = mapa[dataPtBr] || "";
-    const cal = CalendarApp.getDefaultCalendar();
+      const cal = obterCalendarioRiso();
 
     // Dia só com canceladas (ou vazio): tira o evento da parede.
     if (totalPessoas <= 0) {
