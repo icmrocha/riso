@@ -1,13 +1,22 @@
 /**
- * SISTEMA INTEGRADO DE RESERVAS RISO - BACKEND GOOGLE APPS SCRIPT (v3 - Horários Personalizados por Dia)
+ * Riso — backend de reservas (Apps Script).
+ *
+ * Planilha = livro de reservas (fonte da verdade).
+ * Este Script: cria/edita/cancela, agenda do dia, espelho no Google Agenda.
+ *
+ * Ações POST (JSON no body):
+ *   salvarDatasLiberadas | salvarAjudantes | editarReserva
+ *   atualizarStatusReserva | (sem action = nova reserva)
+ *
+ * GET: getDatasLiberadas | getTodasReservas | getReservasData | disponibilidade
  */
-
 const SPREADSHEET_ID = SpreadsheetApp.getActiveSpreadsheet().getId();
 const SHEET_RESERVAS = "Reservas_Ativas";
 const SHEET_DATAS_LIBERADAS = "Datas_Liberadas";
 const MAX_CAPACIDADE_POR_HORA = 8;
 
-const N8N_WEBHOOK_URL = ""; 
+// Destino antigo do n8n. Vazio = não dispara webhook.
+const N8N_WEBHOOK_URL = "";
 
 function obterOuCriarAba(nomeAba) {
   const ss = SpreadsheetApp.openById(SPREADSHEET_ID);
@@ -22,13 +31,15 @@ function obterOuCriarAba(nomeAba) {
 }
 
 function doPost(e) {
+  // Uma reserva por vez. Evita dois cliques no mesmo segundo
+  // criarem dois eventos de calendário para o mesmo sábado.
   const lock = LockService.getScriptLock();
   try {
     lock.waitLock(10000);
   } catch (err) {
-    return respostaJSON({ 
-      status: "error", 
-      message: "O sistema está processando muitas solicitações simultâneas. Tente novamente." 
+    return respostaJSON({
+      status: "error",
+      message: "O sistema está processando muitas solicitações simultâneas. Tente novamente."
     });
   }
 
@@ -36,25 +47,25 @@ function doPost(e) {
     const payload = JSON.parse(e.postData.contents);
     const action = payload.action;
 
-    // AÇÃO 1: SALVAR AGENDA E HORÁRIOS LIBERADOS PELO PAINEL ADM
+    // ---- Agenda do painel ADM (quais dias/horários estão abertos) ----
     if (action === "salvarDatasLiberadas") {
       const sheetDatas = obterOuCriarAba(SHEET_DATAS_LIBERADAS);
       sheetDatas.clearContents();
       sheetDatas.appendRow(["Data_Liberada", "Horarios_Ativos"]);
 
-      const agendaMap = payload.agendaMap || {}; // Ex: {"29/08/2026": ["12:00", "19:00"]}
-      
-      Object.keys(agendaMap).forEach(dataStr => {
+      const agendaMap = payload.agendaMap || {};
+      Object.keys(agendaMap).forEach(function (dataStr) {
         const horariosArr = agendaMap[dataStr];
         if (Array.isArray(horariosArr) && horariosArr.length > 0) {
+          // O apóstrofo força texto. Senão o Sheets vira Date e quebra o filtro.
           sheetDatas.appendRow(["'" + dataStr, JSON.stringify(horariosArr)]);
         }
       });
-
       return respostaJSON({ status: "success", message: "Agenda e horários salvos com sucesso!" });
     }
 
-        if (action === "salvarAjudantes") {
+    // ---- Ajudantes do dia (propriedade do Script, não é coluna da planilha) ----
+    if (action === "salvarAjudantes") {
       const props = PropertiesService.getScriptProperties();
       const mapa = JSON.parse(props.getProperty("ajudantesPorData") || "{}");
       mapa[payload.data] = payload.nomes || "";
@@ -62,7 +73,8 @@ function doPost(e) {
       return respostaJSON({ status: "success" });
     }
 
-        if (action === "editarReserva") {
+    // ---- Editar reserva já existente (ADM; sem teto de 8) ----
+    if (action === "editarReserva") {
       const sheet = SpreadsheetApp.openById(SPREADSHEET_ID).getSheetByName(SHEET_RESERVAS);
       const dados = sheet.getDataRange().getValues();
       const codigoAlvo = String(payload.codigoReserva || "").trim();
@@ -70,30 +82,40 @@ function doPost(e) {
       for (let i = 1; i < dados.length; i++) {
         const c7 = String(dados[i][6]).trim();
         const c9 = String(dados[i][8] || dados[i][6]).trim();
-        if (c7 === codigoAlvo || c9 === codigoAlvo) { linha = i + 1; break; }
+        if (c7 === codigoAlvo || c9 === codigoAlvo) {
+          linha = i + 1;
+          break;
+        }
       }
       if (linha === -1) {
         return respostaJSON({ status: "error", message: "Reserva não encontrada." });
       }
+
+      // Data antiga ANTES de sobrescrever: se o ADM mudou o dia,
+      // o sábado velho também precisa atualizar (ou apagar) o evento.
+      const dataAntiga = normalizarDataParaPtBr(sheet.getRange(linha, 1).getValue());
       const dataAlvo = normalizarDataParaPtBr(payload.dataReserva);
       const horario = normalizarHorario(payload.horario);
       const pessoas = Number(payload.pessoas) || 0;
       if (!dataAlvo || !horario || pessoas <= 0) {
         return respostaJSON({ status: "error", message: "Dados inválidos." });
       }
+
       sheet.getRange(linha, 1).setValue("'" + dataAlvo);
       sheet.getRange(linha, 2).setValue("'" + horario);
       sheet.getRange(linha, 3).setValue(payload.nome || "");
       sheet.getRange(linha, 4).setValue("'" + String(payload.telefone || ""));
       sheet.getRange(linha, 5).setValue(pessoas);
       sheet.getRange(linha, 6).setValue(payload.observacoes || "Nenhuma");
+
+      sincronizarCalendarioDoDia(dataAlvo);
+      if (dataAntiga && dataAntiga !== dataAlvo) {
+        sincronizarCalendarioDoDia(dataAntiga);
+      }
       return respostaJSON({ status: "success" });
     }
-      let linhaEncontrada = -1;
 
-    
-
-    // AÇÃO 2: ATUALIZAR STATUS DA RESERVA (REALIZADA / CANCELADA / REABRIR)
+    // ---- Status: CANCELADA / REALIZADA / REABRIR ----
     if (action === "atualizarStatusReserva") {
       const sheet = SpreadsheetApp.openById(SPREADSHEET_ID).getSheetByName(SHEET_RESERVAS);
       const dados = sheet.getDataRange().getValues();
@@ -104,22 +126,21 @@ function doPost(e) {
       for (let i = 1; i < dados.length; i++) {
         const codigoLinha = String(dados[i][6]).trim();
         const codigoOriginal = String(dados[i][8] || dados[i][6]).trim();
-
         if (codigoLinha === codigoAlvo || codigoOriginal === codigoAlvo) {
           linhaEncontrada = i + 1;
           break;
         }
       }
-
       if (linhaEncontrada === -1) {
         return respostaJSON({ status: "error", message: "Reserva não encontrada." });
       }
 
       const codigoAtualNaPlanilha = String(sheet.getRange(linhaEncontrada, 7).getValue()).trim();
       let codigoOriginalGeral = String(sheet.getRange(linhaEncontrada, 9).getValue()).trim();
-
-      if (!codigoOriginalGeral || codigoOriginalGeral === "") {
-        codigoOriginalGeral = codigoAtualNaPlanilha.startsWith("#RISO-") ? codigoAtualNaPlanilha : ("#RISO-" + Math.random().toString(36).substring(2, 6).toUpperCase());
+      if (!codigoOriginalGeral) {
+        codigoOriginalGeral = codigoAtualNaPlanilha.startsWith("#RISO-")
+          ? codigoAtualNaPlanilha
+          : ("#RISO-" + Math.random().toString(36).substring(2, 6).toUpperCase());
         sheet.getRange(linhaEncontrada, 9).setValue(codigoOriginalGeral);
       }
 
@@ -131,14 +152,17 @@ function doPost(e) {
         sheet.getRange(linhaEncontrada, 7).setValue(codigoOriginalGeral);
       }
 
-      return respostaJSON({ 
-        status: "success", 
+      const dataDoStatus = normalizarDataParaPtBr(sheet.getRange(linhaEncontrada, 1).getValue());
+      sincronizarCalendarioDoDia(dataDoStatus);
+
+      return respostaJSON({
+        status: "success",
         message: "Status atualizado com sucesso!",
         codigoOriginal: codigoOriginalGeral
       });
     }
 
-    // AÇÃO 3: NOVA RESERVA (CLIENTE OU MANUAL ADM COM OVERRIDE)
+    // ---- Nova reserva (site do cliente ou modal ADM) ----
     const sheet = SpreadsheetApp.openById(SPREADSHEET_ID).getSheetByName(SHEET_RESERVAS);
     const dataAlvo = normalizarDataParaPtBr(payload.dataReserva);
     const horarioSolicitado = normalizarHorario(payload.horario);
@@ -149,23 +173,22 @@ function doPost(e) {
       return respostaJSON({ status: "error", message: "Dados de reserva inválidos ou incompletos." });
     }
 
-    // Valida se o horário está ativo para esta data na agenda
     const agendaMap = obterMapaAgendaLiberada();
     const horariosDoDia = agendaMap[dataAlvo] || [];
-    
     if (!horariosDoDia.includes(horarioSolicitado)) {
-      return respostaJSON({ status: "error", message: `O horário das ${horarioSolicitado} não está aberto para reservas nesta data.` });
+      return respostaJSON({
+        status: "error",
+        message: "O horário das " + horarioSolicitado + " não está aberto para reservas nesta data."
+      });
     }
 
     const dados = sheet.getDataRange().getValues();
     let totalPessoasExistentes = 0;
-
     for (let i = 1; i < dados.length; i++) {
       const dataLinha = normalizarDataParaPtBr(dados[i][0]);
       const horarioLinha = normalizarHorario(dados[i][1]);
       const qtdLinha = Number(dados[i][4]) || 0;
       const statusLinha = String(dados[i][6]).trim();
-
       if (dataLinha === dataAlvo && horarioLinha === horarioSolicitado && statusLinha !== "CANCELADA") {
         totalPessoasExistentes += qtdLinha;
       }
@@ -173,20 +196,16 @@ function doPost(e) {
 
     if (!forcarOverride && (totalPessoasExistentes + pessoasSolicitadas > MAX_CAPACIDADE_POR_HORA)) {
       const vagasRestantes = MAX_CAPACIDADE_POR_HORA - totalPessoasExistentes;
-      const msgErro = vagasRestantes > 0 
-        ? `Infelizmente, restam apenas ${vagasRestantes} vaga(s) para o horário das ${horarioSolicitado}.`
-        : `O horário das ${horarioSolicitado} já esgotou todas as vagas disponíveis.`;
-      
+      const msgErro = vagasRestantes > 0
+        ? "Infelizmente, restam apenas " + vagasRestantes + " vaga(s) para o horário das " + horarioSolicitado + "."
+        : "O horário das " + horarioSolicitado + " já esgotou todas as vagas disponíveis.";
       return respostaJSON({ status: "error", message: msgErro });
     }
 
     const codigoReserva = "#RISO-" + Math.random().toString(36).substring(2, 6).toUpperCase();
     const dataCriacao = Utilities.formatDate(new Date(), "America/Sao_Paulo", "dd/MM/yyyy HH:mm:ss");
-
     let observacoesFinais = payload.observacoes || "Nenhuma";
-    if (forcarOverride) {
-      observacoesFinais += " [OVERRIDE ADM]";
-    }
+    if (forcarOverride) observacoesFinais += " [OVERRIDE ADM]";
 
     sheet.appendRow([
       "'" + dataAlvo,
@@ -212,6 +231,7 @@ function doPost(e) {
     };
 
     dispararWebhookN8N(reservaProcessada);
+    sincronizarCalendarioDoDia(dataAlvo);
 
     return respostaJSON({ status: "success", codigoReserva: codigoReserva });
 
@@ -228,11 +248,10 @@ function doGet(e) {
 
     if (action === "getDatasLiberadas") {
       const agendaMap = obterMapaAgendaLiberada();
-      const datasLista = Object.keys(agendaMap);
-      return respostaJSON({ 
-        status: "success", 
-        datasLiberadas: datasLista,
-        agendaMap: agendaMap 
+      return respostaJSON({
+        status: "success",
+        datasLiberadas: Object.keys(agendaMap),
+        agendaMap: agendaMap
       });
     }
 
@@ -240,7 +259,6 @@ function doGet(e) {
       const sheet = SpreadsheetApp.openById(SPREADSHEET_ID).getSheetByName(SHEET_RESERVAS);
       const dados = sheet.getDataRange().getValues();
       const todasReservas = [];
-
       for (let i = 1; i < dados.length; i++) {
         if (dados[i][0]) {
           todasReservas.push({
@@ -255,7 +273,7 @@ function doGet(e) {
           });
         }
       }
-            const ajudantes = JSON.parse(
+      const ajudantes = JSON.parse(
         PropertiesService.getScriptProperties().getProperty("ajudantesPorData") || "{}"
       );
       return respostaJSON({
@@ -263,7 +281,6 @@ function doGet(e) {
         reservas: todasReservas,
         ajudantes: ajudantes
       });
-      
     }
 
     const dataConsultaRaw = e.parameter.data;
@@ -278,10 +295,9 @@ function doGet(e) {
     if (action === "getReservasData") {
       const reservasDoDia = [];
       for (let i = 1; i < dados.length; i++) {
-        const dataLinha = normalizarDataParaPtBr(dados[i][0]);
-        if (dataLinha === dataAlvo) {
+        if (normalizarDataParaPtBr(dados[i][0]) === dataAlvo) {
           reservasDoDia.push({
-            data: dataLinha,
+            data: dataAlvo,
             horario: normalizarHorario(dados[i][1]),
             nome: dados[i][2],
             telefone: String(dados[i][3]),
@@ -295,14 +311,12 @@ function doGet(e) {
       return respostaJSON({ status: "success", reservas: reservasDoDia });
     }
 
-    // DISPONIBILIDADE (TELA DO CLIENTE)
+    // Disponibilidade da tela do cliente
     const agendaMap = obterMapaAgendaLiberada();
     const horariosAtivosDoDia = agendaMap[dataAlvo] || [];
     const dataEstaLiberada = horariosAtivosDoDia.length > 0;
-
-    // Monta dinamicamente apenas os horários abertos para este dia específico
     const disponibilidade = {};
-    horariosAtivosDoDia.forEach(h => {
+    horariosAtivosDoDia.forEach(function (h) {
       disponibilidade[h] = { ocupadas: 0, disponiveis: MAX_CAPACIDADE_POR_HORA, esmaecer: false };
     });
 
@@ -312,60 +326,45 @@ function doGet(e) {
         const horarioReserva = normalizarHorario(dados[i][1]);
         const qtdPessoas = Number(dados[i][4]) || 0;
         const statusLinha = String(dados[i][6]).trim();
-
         if (dataLinha === dataAlvo && disponibilidade[horarioReserva] && statusLinha !== "CANCELADA") {
           disponibilidade[horarioReserva].ocupadas += qtdPessoas;
         }
       }
-
-      Object.keys(disponibilidade).forEach(horario => {
+      Object.keys(disponibilidade).forEach(function (horario) {
         const vagasRestantes = MAX_CAPACIDADE_POR_HORA - disponibilidade[horario].ocupadas;
         disponibilidade[horario].disponiveis = vagasRestantes > 0 ? vagasRestantes : 0;
-        if (vagasRestantes <= 0) {
-          disponibilidade[horario].esmaecer = true;
-        }
+        disponibilidade[horario].esmaecer = vagasRestantes <= 0;
       });
     }
 
-    return respostaJSON({ 
-      status: "success", 
-      data: dataConsultaRaw, 
+    return respostaJSON({
+      status: "success",
+      data: dataConsultaRaw,
       dataLiberada: dataEstaLiberada,
-      disponibilidade: disponibilidade 
+      disponibilidade: disponibilidade
     });
-
   } catch (error) {
     return respostaJSON({ status: "error", message: error.toString() });
   }
 }
 
-/**
- * FUNÇÕES AUXILIARES
- */
 function obterMapaAgendaLiberada() {
   const sheetDatas = obterOuCriarAba(SHEET_DATAS_LIBERADAS);
   const dados = sheetDatas.getDataRange().getValues();
   const map = {};
-
   for (let i = 1; i < dados.length; i++) {
     const dataStr = normalizarDataParaPtBr(dados[i][0]);
     const horariosCol = dados[i][1];
-
-    if (dataStr) {
-      if (horariosCol) {
-        try {
-          const parsed = JSON.parse(horariosCol);
-          if (Array.isArray(parsed)) {
-            map[dataStr] = parsed;
-          }
-        } catch (err) {
-          // Fallback caso estivesse em formato antigo simples
-          map[dataStr] = ["12:00", "13:00", "14:00", "15:00", "16:00"];
-        }
-      } else {
-        // Fallback padrão se a coluna de horários estiver vazia
+    if (!dataStr) continue;
+    if (horariosCol) {
+      try {
+        const parsed = JSON.parse(horariosCol);
+        map[dataStr] = Array.isArray(parsed) ? parsed : ["12:00", "13:00", "14:00", "15:00", "16:00"];
+      } catch (err) {
         map[dataStr] = ["12:00", "13:00", "14:00", "15:00", "16:00"];
       }
+    } else {
+      map[dataStr] = ["12:00", "13:00", "14:00", "15:00", "16:00"];
     }
   }
   return map;
@@ -377,16 +376,16 @@ function normalizarDataParaPtBr(val) {
     return Utilities.formatDate(val, "America/Sao_Paulo", "dd/MM/yyyy");
   }
   const str = String(val).trim();
-  if (str.includes("-")) {
+  if (str.indexOf("-") !== -1) {
     const partes = str.split("T")[0].split("-");
     if (partes.length === 3 && partes[0].length === 4) {
-      return `${partes[2].padStart(2, '0')}/${partes[1].padStart(2, '0')}/${partes[0]}`;
+      return partes[2].padStart(2, "0") + "/" + partes[1].padStart(2, "0") + "/" + partes[0];
     }
   }
-  if (str.includes("/")) {
+  if (str.indexOf("/") !== -1) {
     const p = str.split("/");
     if (p.length === 3) {
-      return `${p[0].padStart(2, '0')}/${p[1].padStart(2, '0')}/${p[2]}`;
+      return p[0].padStart(2, "0") + "/" + p[1].padStart(2, "0") + "/" + p[2];
     }
   }
   return str;
@@ -400,23 +399,146 @@ function normalizarHorario(val) {
   const str = String(val).trim();
   const partes = str.split(":");
   if (partes.length >= 2) {
-    return `${partes[0].padStart(2, '0')}:${partes[1].padStart(2, '0')}`;
+    return partes[0].padStart(2, "0") + ":" + partes[1].padStart(2, "0");
   }
   return str;
 }
 
 function dispararWebhookN8N(dadosReserva) {
-  if (!N8N_WEBHOOK_URL || N8N_WEBHOOK_URL.includes("seu-n8n.com")) return;
-  const options = {
-    method: "post",
-    contentType: "application/json",
-    payload: JSON.stringify(dadosReserva),
-    muteHttpExceptions: true
-  };
-  try { UrlFetchApp.fetch(N8N_WEBHOOK_URL, options); } catch (err) {}
+  // Aviso no WhatsApp da casa (CallMeBot).
+  // Telefone e apikey ficam nas Propriedades do Script:
+  // CALLMEBOT_1_PHONE / CALLMEBOT_1_KEY
+  // CALLMEBOT_2_PHONE / CALLMEBOT_2_KEY (opcional)
+  const props = PropertiesService.getScriptProperties();
+  const texto = [
+    "Nova reserva Riso",
+    dadosReserva.codigoReserva || "",
+    (dadosReserva.nome || "") + " · " + (dadosReserva.pessoas || "") + "p",
+    (dadosReserva.dataReserva || "") + " " + (dadosReserva.horario || ""),
+    dadosReserva.observacoes ? ("Obs: " + dadosReserva.observacoes) : ""
+  ].filter(String).join("\n");
+
+  enviarCallMeBot(props.getProperty("CALLMEBOT_1_PHONE"), props.getProperty("CALLMEBOT_1_KEY"), texto);
+  enviarCallMeBot(props.getProperty("CALLMEBOT_2_PHONE"), props.getProperty("CALLMEBOT_2_KEY"), texto);
+}
+
+function enviarCallMeBot(phone, apikey, texto) {
+  if (!phone || !apikey) return;
+  const url = "https://api.callmebot.com/whatsapp.php"
+    + "?phone=" + encodeURIComponent(String(phone).replace(/\D/g, ""))
+    + "&apikey=" + encodeURIComponent(apikey)
+    + "&text=" + encodeURIComponent(texto);
+  try {
+    UrlFetchApp.fetch(url, { muteHttpExceptions: true, followRedirects: true });
+  } catch (err) {}
 }
 
 function respostaJSON(objeto) {
   return ContentService.createTextOutput(JSON.stringify(objeto))
     .setMimeType(ContentService.MimeType.JSON);
+}
+
+/**
+ * Um evento por DIA de serviço no calendário padrão da conta
+ * que publica este Web App. Compartilhe essa agenda com o outro sócio.
+ *
+ * Quem editar o evento na mão perde a alteração no próximo sync.
+ * Id guardado em Script Properties (calEventosPorData):
+ * salvar a agenda no painel apaga Datas_Liberadas e não serve para o id.
+ *
+ * Se o Calendar falhar, a reserva na planilha já foi gravada. Engolimos o erro.
+ */
+function sincronizarCalendarioDoDia(dataPtBr) {
+  try {
+    if (!dataPtBr) return;
+
+    const sheet = SpreadsheetApp.openById(SPREADSHEET_ID).getSheetByName(SHEET_RESERVAS);
+    const dados = sheet.getDataRange().getValues();
+    const porHora = {};
+    let totalPessoas = 0;
+
+    for (let i = 1; i < dados.length; i++) {
+      if (normalizarDataParaPtBr(dados[i][0]) !== dataPtBr) continue;
+      if (String(dados[i][6]).trim() === "CANCELADA") continue;
+
+      const horario = normalizarHorario(dados[i][1]);
+      const pessoas = Number(dados[i][4]) || 0;
+      const nome = dados[i][2] || "";
+      const obs = String(dados[i][5] || "").trim();
+      const codigo = String(dados[i][8] || dados[i][6] || "").trim();
+
+      if (!porHora[horario]) porHora[horario] = { pessoas: 0, linhas: [] };
+      porHora[horario].pessoas += pessoas;
+      totalPessoas += pessoas;
+
+      const obsCurta = (!obs || obs === "Nenhuma" || obs.indexOf("Reserva inserida manualmente") === 0)
+        ? ""
+        : obs;
+      porHora[horario].linhas.push(
+        "  " + codigo + "  " + nome + "  " + pessoas + "p" + (obsCurta ? "  " + obsCurta : "")
+      );
+    }
+
+    const props = PropertiesService.getScriptProperties();
+    const mapa = JSON.parse(props.getProperty("calEventosPorData") || "{}");
+    const eventId = mapa[dataPtBr] || "";
+    const cal = CalendarApp.getDefaultCalendar();
+
+    // Dia só com canceladas (ou vazio): tira o evento da parede.
+    if (totalPessoas <= 0) {
+      if (eventId) {
+        try { cal.getEventById(eventId).deleteEvent(); } catch (e1) {}
+        delete mapa[dataPtBr];
+        props.setProperty("calEventosPorData", JSON.stringify(mapa));
+      }
+      return;
+    }
+
+    const agenda = obterMapaAgendaLiberada()[dataPtBr] || ["12:00", "16:00"];
+    const horas = agenda.slice().sort();
+    const inicio = dataHoraSp(dataPtBr, horas[0] || "12:00");
+    const fim = dataHoraSp(dataPtBr, somarUmaHora(horas[horas.length - 1] || "16:00"));
+
+    const titulo = "Riso " + dataPtBr.slice(0, 5) + " · " + totalPessoas + "p";
+    const partesDesc = ["Riso — " + dataPtBr, "Total: " + totalPessoas + " pessoas", ""];
+    Object.keys(porHora).sort().forEach(function (h) {
+      partesDesc.push(h + "  (" + porHora[h].pessoas + "/8)");
+      porHora[h].linhas.forEach(function (l) { partesDesc.push(l); });
+      partesDesc.push("");
+    });
+    const descricao = partesDesc.join("\n");
+
+    if (eventId) {
+      try {
+        const ev = cal.getEventById(eventId);
+        ev.setTitle(titulo);
+        ev.setTime(inicio, fim);
+        ev.setDescription(descricao);
+        return;
+      } catch (e2) {
+        // Id sumiu (alguém apagou na agenda): cria de novo.
+        delete mapa[dataPtBr];
+      }
+    }
+
+    const criado = cal.createEvent(titulo, inicio, fim, { description: descricao });
+    mapa[dataPtBr] = criado.getId();
+    props.setProperty("calEventosPorData", JSON.stringify(mapa));
+  } catch (err) {
+    console.error("Calendario: " + err);
+  }
+}
+
+function dataHoraSp(dataPtBr, hhmm) {
+  const p = String(dataPtBr).split("/");
+  const h = String(hhmm).split(":");
+  return new Date(
+    Number(p[2]), Number(p[1]) - 1, Number(p[0]),
+    Number(h[0] || 12), Number(h[1] || 0), 0
+  );
+}
+
+function somarUmaHora(hhmm) {
+  const h = String(hhmm).split(":");
+  return String(Number(h[0]) + 1).padStart(2, "0") + ":" + (h[1] || "00");
 }
