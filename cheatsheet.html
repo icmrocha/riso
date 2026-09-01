@@ -1,0 +1,542 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>RISO — Cheatsheet</title>
+  <style>
+    :root {
+      --bg: #f6f1e8;
+      --header: #2c3f34;
+      --header-2: #24362c;
+      --ink: #1e2a24;
+      --muted: #6f6f68;
+      --card: #fff;
+      --stroke: #e4dcd0;
+      --coral: #c45c3a;
+      --cmd: #2a2a24;
+      --cmd-fg: #f3efe6;
+      --peach: #fbf4ef;
+      --ok: #2c3f34;
+      --shadow: 0 8px 24px rgba(36, 40, 32, .08);
+    }
+    * { box-sizing: border-box; }
+    html, body { margin: 0; padding: 0; }
+    body {
+      font-family: "Lato", "Segoe UI", system-ui, sans-serif;
+      background: var(--bg);
+      color: var(--ink);
+      min-height: 100vh;
+    }
+    code, kbd, .mono { font-family: ui-monospace, "SF Mono", Menlo, Consolas, monospace; }
+
+    .top {
+      position: sticky; top: 0; z-index: 20;
+      background: var(--header);
+      color: #f4efe6;
+      border-bottom: 3px solid var(--coral);
+      padding: 14px 20px 12px;
+    }
+    .top-row {
+      display: flex; gap: 16px; align-items: center; flex-wrap: wrap;
+      max-width: 1200px; margin: 0 auto;
+    }
+    .brand { flex: 1 1 220px; min-width: 200px; }
+    .brand h1 { margin: 0; font-size: 18px; letter-spacing: .2px; }
+    .brand p { margin: 3px 0 0; font-size: 12px; color: #c9d2cb; }
+    .search-wrap { flex: 2 1 320px; position: relative; }
+    .search-wrap input {
+      width: 100%;
+      border: 0;
+      border-radius: 10px;
+      padding: 10px 12px 10px 36px;
+      font-size: 14px;
+      background: #1b2a22;
+      color: #f4efe6;
+      outline: 2px solid transparent;
+    }
+    .search-wrap input:focus { outline-color: var(--coral); }
+    .search-wrap input::placeholder { color: #8aa090; }
+    .search-ico {
+      position: absolute; left: 12px; top: 50%; transform: translateY(-50%);
+      opacity: .7; font-size: 13px;
+    }
+    .badge {
+      background: var(--coral); color: #fff8f4;
+      font-size: 11px; font-weight: 700; letter-spacing: .4px;
+      border-radius: 6px; padding: 5px 8px; white-space: nowrap;
+    }
+
+    .wrap { max-width: 1200px; margin: 0 auto; padding: 16px 16px 48px; }
+
+    .chips { display: flex; gap: 8px; flex-wrap: wrap; margin: 0 0 14px; }
+    .chip {
+      border: 1px solid var(--stroke);
+      background: #fff;
+      color: var(--ink);
+      border-radius: 999px;
+      padding: 6px 12px;
+      font-size: 12.5px;
+      cursor: pointer;
+    }
+    .chip[aria-pressed="true"] {
+      background: var(--header);
+      color: #f4efe6;
+      border-color: var(--header);
+    }
+
+    .hint {
+      color: var(--muted);
+      font-size: 12.5px;
+      font-style: italic;
+      margin: 0 0 14px;
+    }
+
+    .grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 12px;
+    }
+    @media (max-width: 860px) { .grid { grid-template-columns: 1fr; } }
+
+    .card {
+      background: var(--card);
+      border: 1px solid var(--stroke);
+      border-radius: 12px;
+      padding: 14px 14px 12px;
+      box-shadow: var(--shadow);
+    }
+    .card.panic { background: var(--peach); border-left: 3px solid var(--coral); }
+    .card h2 {
+      margin: 0 0 8px;
+      font-size: 15px;
+      color: var(--coral);
+      border-bottom: 1px solid #e8dfd4;
+      padding-bottom: 6px;
+    }
+    .card h2.dark { color: var(--header); }
+    .step { font-size: 13.5px; font-weight: 600; margin: 10px 0 4px; }
+    .note { font-size: 12.5px; color: var(--muted); font-style: italic; margin: 4px 0 6px; }
+    .cmd {
+      background: var(--cmd);
+      color: var(--cmd-fg);
+      border-radius: 8px;
+      padding: 8px 10px;
+      font-size: 12.5px;
+      line-height: 1.45;
+      margin: 4px 0 6px;
+      white-space: pre-wrap;
+      word-break: break-word;
+      cursor: pointer;
+      position: relative;
+    }
+    .cmd:hover { filter: brightness(1.08); }
+    .cmd small.copy {
+      position: absolute; right: 8px; top: 6px;
+      color: #bdb7ab; font-size: 10px; font-style: italic;
+    }
+
+    .dict { margin-top: 18px; }
+    .dict h2 {
+      font-size: 16px; margin: 0 0 8px; color: var(--header);
+    }
+    details.entry {
+      background: #fff;
+      border: 1px solid var(--stroke);
+      border-radius: 10px;
+      margin: 0 0 8px;
+      overflow: hidden;
+    }
+    details.entry summary {
+      cursor: pointer;
+      list-style: none;
+      padding: 10px 12px;
+      font-size: 13.5px;
+      font-weight: 600;
+    }
+    details.entry summary::-webkit-details-marker { display: none; }
+    details.entry summary:before { content: "▸ "; color: var(--coral); }
+    details.entry[open] summary:before { content: "▾ "; }
+    details.entry .body { padding: 0 12px 12px; font-size: 13.5px; line-height: 1.5; }
+    details.entry .body p { margin: 0 0 8px; }
+    details.entry .body ul { margin: 0 0 8px; padding-left: 18px; }
+
+    .hidden { display: none !important; }
+    .empty {
+      display: none;
+      background: #fff;
+      border: 1px dashed var(--stroke);
+      border-radius: 10px;
+      padding: 18px;
+      color: var(--muted);
+      text-align: center;
+    }
+    .empty.show { display: block; }
+
+    footer {
+      max-width: 1200px; margin: 8px auto 0; padding: 8px 16px 24px;
+      color: #9a948a; font-size: 12px; text-align: center;
+    }
+  </style>
+</head>
+<body>
+  <header class="top">
+    <div class="top-row">
+      <div class="brand">
+        <h1>RISO — Cheatsheet</h1>
+        <p>Git, fluxo do site e dicionário · riso.art.br</p>
+      </div>
+      <div class="search-wrap">
+        <span class="search-ico">⌘F</span>
+        <input id="q" type="search" placeholder="Buscar comando, flag, arquivo…  (aperte / )" autocomplete="off" />
+      </div>
+      <span class="badge">MAC & VS CODE</span>
+    </div>
+  </header>
+
+  <main class="wrap">
+    <div class="chips" id="chips">
+      <button class="chip" data-filter="all" aria-pressed="true">Tudo</button>
+      <button class="chip" data-filter="fluxo">Fluxo</button>
+      <button class="chip" data-filter="git">Dicionário Git</button>
+      <button class="chip" data-filter="site">HTML / CSS / JS</button>
+    </div>
+    <p class="hint">Clique num bloco preto para copiar. A busca esconde o que não combina — por isso a página não precisa rolar tanto.</p>
+    <p class="empty" id="empty">Nada encontrado. Tente <code>limpar</code>, <code>-D</code>, <code>stash</code> ou <code>index.html</code>.</p>
+
+    <section class="grid" data-section="fluxo">
+      <article class="card" data-tags="inicio pwd cd pasta repo checkout pull main">
+        <h2>01. Início de Dia</h2>
+        <p class="note">Garanta que está no repo correto. <code>pwd</code> mostra a pasta. O VS Code às vezes abre <code>RISO</code>; o repo é <code>RISO/riso</code>.</p>
+        <div class="step">1. Verificar a pasta</div>
+        <pre class="cmd">pwd
+cd riso</pre>
+        <div class="step">2. Voltar para a branch principal</div>
+        <pre class="cmd">git checkout main</pre>
+        <p class="note">Sala limpa do projeto.</p>
+        <div class="step">3. Puxar novidades</div>
+        <pre class="cmd">git pull origin main</pre>
+        <p class="note">Sincroniza o Mac com o site oficial.</p>
+      </article>
+
+      <article class="card panic" data-tags="panico restore delete -D cancelar">
+        <h2>04. Botão de Pânico</h2>
+        <div class="step">Caso 1 — limpar alterações não salvas</div>
+        <pre class="cmd">git restore .</pre>
+        <p class="note">Descarta edições do VS Code sem apagar a branch.</p>
+        <div class="step">Caso 2 — apagar a branch com erro</div>
+        <pre class="cmd">git checkout main
+git branch -D nome-da-branch-com-erro</pre>
+        <p class="note">Volta para a main e destrói a branch de teste.</p>
+      </article>
+
+      <article class="card" data-tags="tarefa branch checkout -b nova">
+        <h2>02. Nova Tarefa</h2>
+        <div class="step">1. Criar e entrar na branch de testes</div>
+        <pre class="cmd">git checkout -b nome-da-sua-branch</pre>
+        <p class="note">Exemplo: <code>git checkout -b novo-cardapio-sobremesas</code></p>
+        <p class="note">Agora basta abrir o arquivo correto e começar a trabalhar nas mudanças.</p>
+      </article>
+
+      <article class="card" data-tags="uteis log oneline branch ssh fetch prune stash limpar">
+        <h2 class="dark">05. Comandos úteis</h2>
+        <div class="step">Histórico recente</div>
+        <pre class="cmd">git log --oneline -n 5</pre>
+        <div class="step">Branches e SSH</div>
+        <pre class="cmd">git branch
+ssh -T git@github.com</pre>
+        <div class="step">Remoto e gaveta</div>
+        <pre class="cmd">git fetch --prune
+git stash
+git stash pop</pre>
+        <div class="step">Limpar branches já mergeadas</div>
+        <pre class="cmd">git limpar</pre>
+        <p class="note">Preserva a atual, main, master e develop. Usa -d (seguro), não -D.</p>
+      </article>
+
+      <article class="card" data-tags="salvar add commit push command+s status">
+        <h2 class="dark">03. Salvar e enviar</h2>
+        <p class="note">Antes de git add ou commit, salve no VS Code com <strong>Command+S</strong>. Sem isso o Git não vê o arquivo.</p>
+        <div class="step">1. Verificar</div>
+        <pre class="cmd">git status</pre>
+        <div class="step">2. Preparar</div>
+        <pre class="cmd">git add .</pre>
+        <div class="step">3. Commit</div>
+        <pre class="cmd">git commit -m "Explicação da alteração"</pre>
+        <div class="step">4. Enviar</div>
+        <pre class="cmd">git push origin nome-da-sua-branch</pre>
+      </article>
+
+      <article class="card" data-tags="regra main pull request go-live">
+        <h2 class="dark">06. Regra de ouro</h2>
+        <p class="step">Nunca edite na</p>
+        <pre class="cmd">main</pre>
+        <p class="note">Ela é o site ao vivo.</p>
+        <p>• Crie sempre uma branch: trabalhe 100% isolado.</p>
+        <p>• Publicação segura: envie o</p>
+        <pre class="cmd">git push</pre>
+        <p>e abra o <strong>Pull Request</strong> no navegador para o Go-Live.</p>
+      </article>
+    </section>
+
+    <section class="dict" data-section="git">
+      <h2>Dicionário Git</h2>
+      <p class="hint">Clique no título do verbete. A busca também filtra esta lista.</p>
+
+      <details class="entry" data-tags="pwd pasta diretorio">
+        <summary><code>pwd</code> — onde eu estou?</summary>
+        <div class="body">
+          <p>Mostra o caminho da pasta atual do terminal. Se não terminar em <code>/riso</code>, rode <code>cd riso</code> antes de qualquer Git.</p>
+        </div>
+      </details>
+
+      <details class="entry" data-tags="checkout switch main">
+        <summary><code>git checkout main</code> — sala limpa</summary>
+        <div class="body">
+          <p>Troca para a <code>main</code>. Use no começo do dia e depois de terminar (ou cancelar) uma tarefa.</p>
+          <p>Equivalente moderno: <code>git switch main</code>.</p>
+        </div>
+      </details>
+
+      <details class="entry" data-tags="pull origin main sincronizar">
+        <summary><code>git pull origin main</code> — trazer o GitHub</summary>
+        <div class="body">
+          <p><code>origin</code> é o apelido do remoto. <code>main</code> é a branch. Faça isso <strong>antes</strong> de criar uma branch nova.</p>
+        </div>
+      </details>
+
+      <details class="entry" data-tags="checkout -b branch criar">
+        <summary><code>git checkout -b</code> — criar e entrar</summary>
+        <div class="body">
+          <p>A flag <code>-b</code> cria a branch e já entra nela.</p>
+          <pre class="cmd">git checkout -b novo-cardapio-sobremesas</pre>
+          <p>Equivalente moderno: <code>git switch -c nome</code>.</p>
+        </div>
+      </details>
+
+      <details class="entry" data-tags="status command+s salvar">
+        <summary><code>git status</code> — o que mudou?</summary>
+        <div class="body">
+          <p>Lista arquivos novos e modificados. Se a lista vier vazia depois de editar, faltou <strong>Command+S</strong>.</p>
+        </div>
+      </details>
+
+      <details class="entry" data-tags="add ponto staging">
+        <summary><code>git add .</code> — preparar tudo</summary>
+        <div class="body">
+          <p>O ponto <code>.</code> = todos os arquivos desta pasta. Ainda não grava o histórico — só coloca no balcão (staging).</p>
+        </div>
+      </details>
+
+      <details class="entry" data-tags="commit -m mensagem">
+        <summary><code>git commit -m</code> — checkpoint</summary>
+        <div class="body">
+          <p><code>-m</code> coloca a mensagem na mesma linha.</p>
+          <pre class="cmd">git commit -m "Atualiza sobremesas do cardápio de sábado"</pre>
+        </div>
+      </details>
+
+      <details class="entry" data-tags="push origin remoto">
+        <summary><code>git push origin nome</code> — enviar</summary>
+        <div class="body">
+          <p>Sobe a branch. A <code>main</code> do site ainda não muda. Depois: Pull Request no navegador.</p>
+        </div>
+      </details>
+
+      <details class="entry" data-tags="restore descartar">
+        <summary><code>git restore .</code> — descartar o não commitado</summary>
+        <div class="body">
+          <p>Joga fora edições locais que ainda não viraram commit. Não apaga a branch.</p>
+        </div>
+      </details>
+
+      <details class="entry" data-tags="-d -D delete branch">
+        <summary><code>-d</code> vs <code>-D</code></summary>
+        <div class="body">
+          <ul>
+            <li><code>-d</code> — apaga só se já foi mergeada. Seguro. É o que o <code>git limpar</code> usa.</li>
+            <li><code>-D</code> — apaga à força. Botão de pânico.</li>
+          </ul>
+        </div>
+      </details>
+
+      <details class="entry" data-tags="log --oneline -n historico">
+        <summary><code>git log --oneline -n 5</code></summary>
+        <div class="body">
+          <ul>
+            <li><code>--oneline</code> — um commit por linha (hash curto + mensagem).</li>
+            <li><code>-n 5</code> — só os 5 mais recentes.</li>
+          </ul>
+        </div>
+      </details>
+
+      <details class="entry" data-tags="fetch --prune remoto">
+        <summary><code>git fetch --prune</code></summary>
+        <div class="body">
+          <p>Atualiza o mapa do GitHub e remove no Mac as refs de branches que já não existem lá. Não mexe nos seus arquivos.</p>
+        </div>
+      </details>
+
+      <details class="entry" data-tags="stash pop gaveta">
+        <summary><code>git stash</code> / <code>git stash pop</code></summary>
+        <div class="body">
+          <p><code>stash</code> guarda mudanças sem commit numa gaveta. <code>stash pop</code> devolve. Útil para trocar de branch no meio de uma edição.</p>
+        </div>
+      </details>
+
+      <details class="entry" data-tags="limpar merged xargs alias">
+        <summary><code>git limpar</code> — o seu alias</summary>
+        <div class="body">
+          <p>Apaga branches já mergeadas. Preserva a atual, <code>main</code>, <code>master</code> e <code>develop</code>.</p>
+          <pre class="cmd">git branch --merged | grep -v '^\*' | grep -vE '^(main|master|develop)$' | xargs git branch -d</pre>
+          <ol>
+            <li><code>--merged</code> lista o que já entrou em outra branch.</li>
+            <li><code>grep -v '^\*'</code> tira a branch atual.</li>
+            <li>O segundo <code>grep</code> protege main / master / develop.</li>
+            <li><code>xargs git branch -d</code> apaga o resto, só se estiver mergeado.</li>
+          </ol>
+          <p>Se o alias ainda não existir nesta máquina:</p>
+          <pre class="cmd">git config --global alias.limpar '!git branch --merged | grep -v "^\\*" | grep -vE "^(main|master|develop)$" | xargs git branch -d'</pre>
+        </div>
+      </details>
+
+      <details class="entry" data-tags="ssh -T github">
+        <summary><code>ssh -T git@github.com</code></summary>
+        <div class="body">
+          <p>Testa a chave SSH. Resposta boa: “Hi usuario! You've successfully authenticated…”. <code>-T</code> = teste sem abrir sessão.</p>
+        </div>
+      </details>
+
+      <details class="entry" data-tags="origin remoto">
+        <summary><code>origin</code></summary>
+        <div class="body"><p>Apelido padrão do repositório no GitHub. Ver endereço: <code>git remote -v</code>.</p></div>
+      </details>
+
+      <details class="entry" data-tags="main ao vivo">
+        <summary><code>main</code></summary>
+        <div class="body"><p>No Riso, é o que o visitante vê em riso.art.br. Não commite nela no dia a dia.</p></div>
+      </details>
+    </section>
+
+    <section class="dict" data-section="site">
+      <h2>Dicionário do site (HTML / CSS / JS)</h2>
+      <p class="hint">Vá colando verbetes conforme o código aparecer. Molde no último item.</p>
+
+      <details class="entry" data-tags="index.html home">
+        <summary><code>index.html</code> — home</summary>
+        <div class="body"><p>Entrada do site. Mudança visual da home começa aqui. Branch nova + Command+S + <code>git status</code>.</p></div>
+      </details>
+
+      <details class="entry" data-tags="cardapio.html pdf">
+        <summary><code>cardapio.html</code> / <code>cardapio.pdf</code></summary>
+        <div class="body"><p>Cardápio público. Se o PDF for gerado à parte, atualize os dois no mesmo commit para não divergir.</p></div>
+      </details>
+
+      <details class="entry" data-tags="res_index.html reserva formulario">
+        <summary><code>res_index.html</code> — reservas</summary>
+        <div class="body">
+          <p>Formulário público. Conversa com o Google Apps Script (planilha).</p>
+          <p>Mudar texto é seguro. Mudar nome de campo, <code>action</code> ou payload quebra a reserva.</p>
+        </div>
+      </details>
+
+      <details class="entry" data-tags="admin painel">
+        <summary><code>admin/</code> — painel</summary>
+        <div class="body"><p>Ferramentas internas, não é a home. Evite misturar commit de admin com commit de cardápio no mesmo PR.</p></div>
+      </details>
+
+      <details class="entry" data-tags="cname dominio pages">
+        <summary><code>CNAME</code></summary>
+        <div class="body"><p>Diz ao GitHub Pages que o domínio é <code>riso.art.br</code>. Não apague.</p></div>
+      </details>
+
+      <details class="entry" data-tags="molde template js css">
+        <summary>Molde para um JS / CSS novo</summary>
+        <div class="body">
+          <p>Copie um <code>&lt;details class="entry"&gt;</code> acima e preencha:</p>
+          <ul>
+            <li><code>data-tags</code> com palavras que você buscaria</li>
+            <li>título: arquivo ou função + uma linha do que faz</li>
+            <li>onde vive, o que faz, trecho curto, o que não mexer</li>
+          </ul>
+        </div>
+      </details>
+    </section>
+  </main>
+
+  <footer>RISO Studio & Bistro — abra este arquivo com Live Preview e piná a aba. Clique no comando para copiar.</footer>
+
+  <script>
+    const q = document.getElementById("q");
+    const empty = document.getElementById("empty");
+    const chips = document.querySelectorAll(".chip");
+    let filter = "all";
+
+    function norm(s) {
+      return (s || "").toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+    }
+
+    function apply() {
+      const term = norm(q.value.trim());
+      let shown = 0;
+
+      document.querySelectorAll("[data-section]").forEach((sec) => {
+        const kind = sec.getAttribute("data-section");
+        const kindOk = filter === "all" || filter === kind;
+        if (!kindOk) {
+          sec.classList.add("hidden");
+          return;
+        }
+        sec.classList.remove("hidden");
+
+        const items = sec.querySelectorAll(".card, details.entry");
+        items.forEach((el) => {
+          const blob = norm((el.getAttribute("data-tags") || "") + " " + el.innerText);
+          const ok = !term || blob.includes(term);
+          el.classList.toggle("hidden", !ok);
+          if (ok) shown += 1;
+        });
+      });
+
+      empty.classList.toggle("show", shown === 0);
+    }
+
+    q.addEventListener("input", apply);
+    chips.forEach((btn) => {
+      btn.addEventListener("click", () => {
+        chips.forEach((b) => b.setAttribute("aria-pressed", "false"));
+        btn.setAttribute("aria-pressed", "true");
+        filter = btn.dataset.filter;
+        apply();
+      });
+    });
+
+    document.addEventListener("keydown", (e) => {
+      if (e.key === "/" && document.activeElement !== q) {
+        e.preventDefault();
+        q.focus();
+        q.select();
+      }
+      if (e.key === "Escape") {
+        q.value = "";
+        q.blur();
+        apply();
+      }
+    });
+
+    document.querySelectorAll("pre.cmd").forEach((el) => {
+      el.addEventListener("click", async () => {
+        const text = el.innerText.replace(/\n?$/, "");
+        try {
+          await navigator.clipboard.writeText(text);
+          const tag = document.createElement("small");
+          tag.className = "copy";
+          tag.textContent = "copiado";
+          el.appendChild(tag);
+          setTimeout(() => tag.remove(), 900);
+        } catch (_) {}
+      });
+    });
+  </script>
+</body>
+</html>
