@@ -18,11 +18,12 @@ function doGet(e) {
     const tarefa = linha[2];
     const status = linha[4];
     const horario = linha[5];
+    const comentario = linha[6] ? String(linha[6]) : "";
     if (!categoria || !tarefa) return;
     if (cicloAtual && String(idServico) !== String(cicloAtual)) return;
 
     const feito = status === "CONCLUIDO" || status === "TRUE" || status === true;
-    const info = { done: feito, completedAt: horario || "" };
+    const info = { done: feito, completedAt: horario || "", comentario: comentario };
     statusMap[categoria + "_" + tarefa] = info;
     statusMap[tarefa] = info;
   });
@@ -58,7 +59,7 @@ function doGet(e) {
   const categoriasMap = {};
   const usados = {};
 
-  function adicionar(categoria, tarefa, tag) {
+  function adicionar(categoria, tarefa, tag, detalhe) {
     if (!categoriasMap[categoria]) {
       categoriasMap[categoria] = { category: categoria, tasks: [] };
     }
@@ -66,26 +67,29 @@ function doGet(e) {
     categoriasMap[categoria].tasks.push({
       text: tarefa,
       tag: tag || "Cozinha",
+      detalhe: detalhe || "",
       done: logExistente ? logExistente.done : false,
-      completedAt: logExistente ? logExistente.completedAt : ""
+      completedAt: logExistente ? logExistente.completedAt : "",
+      comentario: logExistente && logExistente.comentario ? logExistente.comentario : ""
     });
   }
 
   if (ordemDoDia.length > 0) {
     ordemDoDia.forEach(function (item) {
-      adicionar(item.categoria, item.tarefa, item.tag);
+      const m = masterPorChave[item.categoria + "_" + item.tarefa];
+      adicionar(item.categoria, item.tarefa, item.tag, m ? m.detalhe : "");
       usados[item.categoria + "_" + item.tarefa] = true;
       usados[item.tarefa] = true;
     });
     masterLista.forEach(function (chave) {
       const m = masterPorChave[chave];
       if (usados[chave] || usados[m.tarefa]) return;
-      adicionar(m.categoria, m.tarefa, m.tag);
+      adicionar(m.categoria, m.tarefa, m.tag, m.detalhe);
     });
   } else {
     masterLista.forEach(function (chave) {
       const m = masterPorChave[chave];
-      adicionar(m.categoria, m.tarefa, m.tag);
+      adicionar(m.categoria, m.tarefa, m.tag, m.detalhe);
     });
   }
 
@@ -125,6 +129,24 @@ function doPost(e) {
         aba.appendRow(["idCiclo", "categoria", "tarefa", "tag", "posicao"]);
       }
 
+          if (dadosRecebidos.acao === "SALVAR_COMENTARIO") {
+      const abaLog = ss.getSheetByName("LOG");
+      const cicloCasa = PropertiesService.getScriptProperties().getProperty("cicloAtual")
+        || dadosRecebidos.idServico
+        || "SERVICO_PADRAO";
+      abaLog.appendRow([
+        cicloCasa,
+        dadosRecebidos.categoria,
+        dadosRecebidos.tarefa,
+        dadosRecebidos.tag || "Cozinha",
+        dadosRecebidos.done ? "CONCLUIDO" : "PENDENTE",
+        dadosRecebidos.horarioConclusao || "",
+        dadosRecebidos.comentario || ""
+      ]);
+      return ContentService.createTextOutput(JSON.stringify({ status: "sucesso" }))
+        .setMimeType(ContentService.MimeType.JSON);
+    }
+
       const itens = dadosRecebidos.itens || [];
       const dados = aba.getDataRange().getValues();
       // Apaga só as linhas DESTE ciclo (de baixo para cima).
@@ -155,8 +177,9 @@ function doPost(e) {
       categoria,
       tarefa,
       tag,
-            (status === true || status === "TRUE" || status === "CONCLUIDO") ? "CONCLUIDO" : "PENDENTE",
-      horarioConclusao || ""
+      (status === true || status === "TRUE" || status === "CONCLUIDO") ? "CONCLUIDO" : "PENDENTE",
+      horarioConclusao || "",
+      dadosRecebidos.comentario || ""
     ]);
 
     return ContentService.createTextOutput(JSON.stringify({ status: "sucesso" }))
