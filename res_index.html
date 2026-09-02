@@ -371,8 +371,13 @@
     <form id="reservationForm" onsubmit="submitReservation(event)">
       
       <div class="form-group">
-        <label for="dataReserva">Dia da Reserva:</label>
+                <label for="dataReserva">Dia da Reserva:</label>
+        <!-- #58: calendário nativo comentado. Voltar = descomentar o input e comentar o select.
         <input type="date" id="dataReserva" required onchange="consultarDisponibilidade()">
+        -->
+        <select id="dataReserva" required onchange="consultarDisponibilidade()">
+          <option value="" disabled selected>Carregando dias…</option>
+        </select>
       </div>
 
       <div class="form-group">
@@ -397,7 +402,7 @@
       <div class="form-group">
         <label>Horário:</label>
         <div class="slots-grid" id="slotsContainer">
-          <div class="helper-text" style="grid-column: span 3;">Selecione uma data no calendário e informe a quantidade de pessoas para consultar os horários disponíveis.</div>
+          <div class="helper-text" style="grid-column: span 3;">Selecione uma data e informe a quantidade de pessoas para consultar os horários disponíveis.</div>
         </div>
         <div class="loading-overlay" id="loadingSlots">Consultando horários disponíveis...</div>
         <div class="helper-text" id="slotsHelper" style="display: none; font-weight: 500;"></div>
@@ -488,11 +493,44 @@
     let vagasDoDia = null;
     let datasLiberadasSet = new Set();
 
-    const inputData = document.getElementById("dataReserva");
+
+   // OLD code 
+    // const inputData = document.getElementById("dataReserva");
+    // const hoje = new Date().toISOString().split("T")[0];
+    // inputData.min = hoje;
+
+    // carregarDatasLiberadas();
+
+    // async function carregarDatasLiberadas() {
+    //   try {
+    //     const response = await fetch(`${API_URL}?action=getDatasLiberadas`);
+    //     const result = await response.json();
+    //     if (result.status === "success" && Array.isArray(result.datasLiberadas)) {
+    //       datasLiberadasSet = new Set(result.datasLiberadas);
+    //     }
+    //   } catch (err) {}
+    // }
+
+        const inputData = document.getElementById("dataReserva");
     const hoje = new Date().toISOString().split("T")[0];
-    inputData.min = hoje;
+    // #58: min do input[type=date]. Voltar o calendário = descomentar.
+    // inputData.min = hoje;
 
     carregarDatasLiberadas();
+
+    function dataPtBrParaIso(str) {
+      const p = String(str || "").split("/");
+      if (p.length !== 3) return "";
+      return p[2] + "-" + p[1].padStart(2, "0") + "-" + p[0].padStart(2, "0");
+    }
+
+    function rotuloDataPtBr(str) {
+      const iso = dataPtBrParaIso(str);
+      if (!iso) return str;
+      const dt = new Date(iso + "T12:00:00");
+      const nomes = ["domingo", "segunda", "terça", "quarta", "quinta", "sexta", "sábado"];
+      return nomes[dt.getDay()] + ", " + str;
+    }
 
     async function carregarDatasLiberadas() {
       try {
@@ -500,8 +538,36 @@
         const result = await response.json();
         if (result.status === "success" && Array.isArray(result.datasLiberadas)) {
           datasLiberadasSet = new Set(result.datasLiberadas);
+
+          const futuras = result.datasLiberadas
+            .map(function (d) { return { pt: d, iso: dataPtBrParaIso(d) }; })
+            .filter(function (x) { return x.iso && x.iso >= hoje; })
+            .sort(function (a, b) { return a.iso < b.iso ? -1 : 1; });
+
+          inputData.innerHTML = "";
+          const primeiro = document.createElement("option");
+          primeiro.value = "";
+          primeiro.disabled = true;
+          primeiro.selected = true;
+          if (futuras.length === 0) {
+            primeiro.textContent = "Nenhum dia aberto no momento";
+            inputData.appendChild(primeiro);
+            inputData.disabled = true;
+            return;
+          }
+          primeiro.textContent = "Escolha o dia";
+          inputData.appendChild(primeiro);
+          futuras.forEach(function (x) {
+            const op = document.createElement("option");
+            op.value = x.iso;
+            op.textContent = rotuloDataPtBr(x.pt);
+            inputData.appendChild(op);
+          });
+          inputData.disabled = false;
         }
-      } catch (err) {}
+      } catch (err) {
+        inputData.innerHTML = '<option value="" disabled selected>Não foi possível carregar os dias</option>';
+      }
     }
 
     function mascaraTelefone(input) {
