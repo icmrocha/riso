@@ -556,7 +556,7 @@
     </div>
     <div class="filter-group">
       <button class="btn-secondary" id="btnLimparFiltro" style="display:none;" onclick="limparFiltroData()">🧹 Limpar Filtro</button>
-      <button class="btn-secondary" id="btnOcultarPassadas" onclick="toggleOcultarPassadas()">👁️ Ocultar reservas passadas</button>
+      <button class="btn-secondary" id="btnOcultarPassadas" onclick="toggleOcultarPassadas()">👁️ Mostrar reservas passadas</button>
     </div>
   </div>
 
@@ -673,7 +673,7 @@
   <script>
     const API_URL = "https://script.google.com/macros/s/AKfycbyOyPr6hWM80KTGIhsrML7wWX1qxhGDW96j-uFNJqX-MmLcD-uiTLTojW5kkFdK870L/exec";
 
-    let ocultarPassadas = false;
+    let ocultarPassadas = true;
     let agendaLiberadaMap = {}; // Ex: {"29/08/2026": ["12:00", "13:00"]}
     let dataCalendarioAtual = new Date();
     let dataSelecionadaNoModal = null; // Data no formato DD/MM/AAAA sendo editada no modal
