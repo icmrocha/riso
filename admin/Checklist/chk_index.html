@@ -228,6 +228,25 @@
     }
     .task-tag {
       flex-shrink: 0;
+
+    .task-detalhe {
+      display: block;
+      margin-top: 3px;
+      font-size: 0.75rem;
+      font-style: italic;
+      font-weight: 400;
+      color: #64748b;
+      line-height: 1.35;
+    }
+    .task-detalhe a {
+      font-size: 0.75rem;
+      font-style: italic;
+      font-weight: 600;
+      color: #2563eb;
+      text-decoration: underline;
+    }
+
+
     }
     .task-nota {
       display: block;
@@ -578,7 +597,7 @@ async function fetchMasterFromSheets() {
     function linkificarDetalhe(texto) {
       const seguro = escaparHtml(texto);
       return seguro.replace(/(https?:\/\/[^\s<]+)/g, function (url) {
-        return '<a href="' + url + '" target="_blank" rel="noopener">' + url + "</a>";
+        return '<a href="' + url + '" target="_blank" rel="noopener">link</a>';
       });
     }
 
