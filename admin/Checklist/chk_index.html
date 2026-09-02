@@ -323,7 +323,7 @@
     <button class="btn-tag" onclick="setSectorFilter('ADM')">ADM</button>
     <button class="btn-tag" onclick="setSectorFilter('Cozinha')">Cozinha</button>
     <button class="btn-tag" onclick="setSectorFilter('Salão')">Salão</button>
-    <button class="btn-tag" id="btnHideDetalhes" onclick="toggleHideDetalhes()">Esconder detalhes da tarefa</button>
+    <button class="btn-tag active" id="btnHideDetalhes" onclick="toggleHideDetalhes()">Mostrar detalhes da tarefa</button>
   </div>
 
   <!-- Controles Principais -->
@@ -344,7 +344,7 @@
 
     let state = JSON.parse(localStorage.getItem("restaurantChecklistState")) || null;
     let hideCompleted = false;
-    let hideDetalhes = false;
+    let hideDetalhes = true;
     let currentSector = "Tudo";
     let isSyncing = false;
     let lastLocalUpdate = 0; // TRAVA DE SEGURANÇA: Registra o momento da última alteração local
