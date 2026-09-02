@@ -30,13 +30,19 @@ function doGet(e) {
 
   const masterPorChave = {};
   const masterLista = [];
-  dadosMaster.forEach(function (linha) {
+    dadosMaster.forEach(function (linha) {
     const categoria = linha[0];
     const tarefa = linha[1];
     const tag = linha[2] || "Cozinha";
+    const detalhe = linha[3] ? String(linha[3]) : "";
     if (!categoria || !tarefa) return;
     const chave = categoria + "_" + tarefa;
-    masterPorChave[chave] = { categoria: categoria, tarefa: tarefa, tag: tag };
+    masterPorChave[chave] = {
+      categoria: categoria,
+      tarefa: tarefa,
+      tag: tag,
+      detalhe: detalhe
+    };
     masterLista.push(chave);
   });
 
