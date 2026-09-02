@@ -216,6 +216,42 @@
       text-decoration: none !important;
     }
 
+    .task-detalhe {
+      display: block;
+      margin-top: 2px;
+      font-size: 0.78rem;
+      font-style: italic;
+      font-weight: 400;
+      color: #64748b;
+      line-height: 1.3;
+    }
+    .task-detalhe a {
+      color: #2563eb;
+      font-style: italic;
+    }
+    .task-nota {
+      display: block;
+      width: 100%;
+      margin-top: 6px;
+      padding: 6px 8px;
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      font-size: 0.8rem;
+      font-family: inherit;
+    }
+    .task-nota-chip {
+      display: inline-block;
+      margin-top: 6px;
+      padding: 4px 10px;
+      background: #f1f5f9;
+      color: #475569;
+      border-radius: 8px;
+      font-size: 0.8rem;
+    }
+
+
+
+
     .task-tag {
       font-size: 0.7rem;
       font-weight: bold;
@@ -283,6 +319,7 @@
     <button class="btn-tag" onclick="setSectorFilter('ADM')">ADM</button>
     <button class="btn-tag" onclick="setSectorFilter('Cozinha')">Cozinha</button>
     <button class="btn-tag" onclick="setSectorFilter('Salão')">Salão</button>
+    <button class="btn-tag" id="btnHideDetalhes" onclick="toggleHideDetalhes()">Esconder detalhes da tarefa</button>
   </div>
 
   <!-- Controles Principais -->
@@ -303,6 +340,7 @@
 
     let state = JSON.parse(localStorage.getItem("restaurantChecklistState")) || null;
     let hideCompleted = false;
+    let hideDetalhes = false;
     let currentSector = "Tudo";
     let isSyncing = false;
     let lastLocalUpdate = 0; // TRAVA DE SEGURANÇA: Registra o momento da última alteração local
@@ -343,7 +381,9 @@ async function fetchMasterFromSheets() {
               text: t.text,
               tag: t.tag || "Cozinha",
               done: t.done || false,
-              completedAt: t.completedAt || undefined
+             completedAt: t.completedAt || undefined,
+              detalhe: t.detalhe || "",
+              comentario: t.comentario || ""
             }))
           }));
           
@@ -374,7 +414,12 @@ async function fetchMasterFromSheets() {
           tag: tag,
           // CORREÇÃO: Enviando string explícita para o Apps Script não ignorar o valor "false"
           status: status ? "TRUE" : "FALSE", 
-          horarioConclusao: horarioConclusao
+          horarioConclusao: horarioConclusao,
+                    comentario: (function () {
+            const cat = state.find(function (c) { return c.category === categoria; });
+            const t = cat && cat.tasks.find(function (x) { return x.text === tarefa; });
+            return (t && t.comentario) || "";
+          })()
         })
       })
       .then(() => {
@@ -455,6 +500,29 @@ async function fetchMasterFromSheets() {
       sendLogToSheets(categoria, task.text, task.tag, task.done, horarioFormatado);
     }
 
+        function salvarComentarioTarefa(catIdx, taskIdx, texto) {
+      const task = state[catIdx].tasks[taskIdx];
+      const categoria = state[catIdx].category;
+      task.comentario = texto.trim();
+      lastLocalUpdate = Date.now();
+      saveState();
+      fetch(API_URL, {
+        method: "POST",
+        mode: "no-cors",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          acao: "SALVAR_COMENTARIO",
+          idServico: idServicoAtual,
+          categoria: categoria,
+          tarefa: task.text,
+          tag: task.tag,
+          done: task.done,
+          horarioConclusao: task.completedAt || "",
+          comentario: task.comentario
+        })
+      });
+    }
+
     function setSectorFilter(sector) {
       currentSector = sector;
       document.querySelectorAll(".btn-tag").forEach(btn => {
@@ -466,6 +534,33 @@ async function fetchMasterFromSheets() {
     function toggleHideCompleted() {
       hideCompleted = !hideCompleted;
       render();
+    }
+
+        function toggleHideDetalhes() {
+      hideDetalhes = !hideDetalhes;
+      const btn = document.getElementById("btnHideDetalhes");
+      if (btn) {
+        btn.classList.toggle("active", hideDetalhes);
+        btn.innerText = hideDetalhes
+          ? "Mostrar detalhes da tarefa"
+          : "Esconder detalhes da tarefa";
+      }
+      render();
+    }
+
+    function escaparHtml(str) {
+      return String(str || "")
+        .replace(/&/g, "&amp;")
+        .replace(/</g, "&lt;")
+        .replace(/>/g, "&gt;")
+        .replace(/"/g, "&quot;");
+    }
+
+    function linkificarDetalhe(texto) {
+      const seguro = escaparHtml(texto);
+      return seguro.replace(/(https?:\/\/[^\s<]+)/g, function (url) {
+        return '<a href="' + url + '" target="_blank" rel="noopener">' + url + "</a>";
+      });
     }
 
     function resetChecklist() {
@@ -575,9 +670,20 @@ async function fetchMasterFromSheets() {
           li.innerHTML = `
             <span class="drag-handle">⠿</span>
             <input type="checkbox" ${task.done ? 'checked' : ''} onchange="toggleTask(${catIdx}, ${taskIdx})">
-            <span class="task-text">
+                        <span class="task-text">
               ${task.text}
+              ${(!hideDetalhes && task.detalhe) ? `<span class="task-detalhe">${linkificarDetalhe(task.detalhe)}</span>` : ''}
               ${task.done && task.completedAt ? `<span class="task-meta">${task.completedAt}</span>` : ''}
+              ${
+                hideDetalhes
+                  ? (task.comentario
+                      ? `<span class="task-nota-chip">${escaparHtml(task.comentario)}</span>`
+                      : '')
+                  : `<input class="task-nota" type="text" placeholder="nota"
+                      value="${escaparHtml(task.comentario || '')}"
+                      onmousedown="event.stopPropagation()"
+                      onchange="salvarComentarioTarefa(${catIdx}, ${taskIdx}, this.value)">`
+              }
             </span>
             <span class="task-tag">${task.tag || 'Cozinha'}</span>
           `;
