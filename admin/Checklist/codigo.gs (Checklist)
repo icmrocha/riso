@@ -30,7 +30,7 @@ function doGet(e) {
 
   const masterPorChave = {};
   const masterLista = [];
-    dadosMaster.forEach(function (linha) {
+  dadosMaster.forEach(function (linha) {
     const categoria = linha[0];
     const tarefa = linha[1];
     const tag = linha[2] || "Cozinha";
@@ -41,7 +41,10 @@ function doGet(e) {
       categoria: categoria,
       tarefa: tarefa,
       tag: tag,
-      detalhe: detalhe
+      detalhe: detalhe,
+      recorrencia: linha[4] ? String(linha[4]).trim() : "",
+      recorrenciaValor: linha[5] ? String(linha[5]).trim() : "",
+      proximaEm: formatarDataPlanilha(linha[6])
     };
     masterLista.push(chave);
   });
@@ -65,37 +68,55 @@ function doGet(e) {
   const categoriasMap = {};
   const usados = {};
 
-  function adicionar(categoria, tarefa, tag, detalhe) {
+  function adicionar(categoria, tarefa, tag, detalhe, recInfo) {
     if (!categoriasMap[categoria]) {
       categoriasMap[categoria] = { category: categoria, tasks: [] };
     }
     const logExistente = statusMap[categoria + "_" + tarefa] || statusMap[tarefa] || null;
+    const rec = recInfo || {};
+    const isRecorrente = ehRecorrente(rec.recorrencia);
+    const vencida = isRecorrente ? tarefaRecorrenteVencida(rec.proximaEm) : false;
+    const done = isRecorrente
+      ? !vencida
+      : (logExistente ? logExistente.done : false);
+
     categoriasMap[categoria].tasks.push({
       text: tarefa,
       tag: tag || "Cozinha",
       detalhe: detalhe || "",
-      done: logExistente ? logExistente.done : false,
-      completedAt: logExistente ? logExistente.completedAt : "",
-      comentario: logExistente && logExistente.comentario ? logExistente.comentario : ""
+      done: done,
+      completedAt: isRecorrente ? "" : (logExistente ? logExistente.completedAt : ""),
+      comentario: logExistente && logExistente.comentario ? logExistente.comentario : "",
+      isRecorrente: isRecorrente,
+      vencida: vencida,
+      recorrencia: rec.recorrencia || "",
+      recorrenciaValor: rec.recorrenciaValor || "",
+      proximaEm: rec.proximaEm || ""
     });
   }
 
   if (ordemDoDia.length > 0) {
     ordemDoDia.forEach(function (item) {
       const m = masterPorChave[item.categoria + "_" + item.tarefa];
-      adicionar(item.categoria, item.tarefa, item.tag, m ? m.detalhe : "");
+      adicionar(
+        item.categoria,
+        item.tarefa,
+        item.tag,
+        m ? m.detalhe : "",
+        m || {}
+      );
       usados[item.categoria + "_" + item.tarefa] = true;
       usados[item.tarefa] = true;
     });
     masterLista.forEach(function (chave) {
       const m = masterPorChave[chave];
       if (usados[chave] || usados[m.tarefa]) return;
-      adicionar(m.categoria, m.tarefa, m.tag, m.detalhe);
+      adicionar(m.categoria, m.tarefa, m.tag, m.detalhe, m);
     });
   } else {
     masterLista.forEach(function (chave) {
       const m = masterPorChave[chave];
-      adicionar(m.categoria, m.tarefa, m.tag, m.detalhe);
+      adicionar(m.categoria, m.tarefa, m.tag, m.detalhe, m);
     });
   }
 
@@ -108,25 +129,53 @@ function doPost(e) {
     const dadosRecebidos = JSON.parse(e.postData.contents);
     const ss = SpreadsheetApp.getActiveSpreadsheet();
 
-    // Ação 1: Adicionar nova tarefa na aba MASTER
     if (dadosRecebidos.acao === "CRIAR_TAREFA") {
       const abaMaster = ss.getSheetByName("MASTER");
+      const rec = String(dadosRecebidos.recorrencia || "").trim();
+      const valor = String(dadosRecebidos.recorrenciaValor || "").trim();
+      const isRec = ehRecorrente(rec);
       abaMaster.appendRow([
         dadosRecebidos.categoria,
         dadosRecebidos.tarefa,
-        dadosRecebidos.tag || "Cozinha"
+        dadosRecebidos.tag || "Cozinha",
+        dadosRecebidos.detalhe || "",
+        isRec ? rec : "TODOSERVICO",
+        valor,
+        isRec ? dataHojeBr() : ""
       ]);
       return ContentService.createTextOutput(JSON.stringify({ status: "sucesso" }))
         .setMimeType(ContentService.MimeType.JSON);
     }
-// Novo ciclo: o HTML já trocou o idServico. Não precisa apagar o LOG.
+
     if (dadosRecebidos.acao === "RESET") {
       const novoId = dadosRecebidos.idServico || ("SERV_" + Date.now());
       PropertiesService.getScriptProperties().setProperty("cicloAtual", novoId);
       return ContentService.createTextOutput(JSON.stringify({ status: "sucesso" }))
         .setMimeType(ContentService.MimeType.JSON);
     }
-        if (dadosRecebidos.acao === "SALVAR_ORDEM") {
+
+    if (dadosRecebidos.acao === "CONCLUIR_RECORRENTE") {
+      const aba = ss.getSheetByName("MASTER");
+      const alvo = String(dadosRecebidos.tarefa || "").trim();
+      const catAlvo = String(dadosRecebidos.categoria || "").trim();
+      const feito = dadosRecebidos.feito !== false;
+      const dados = aba.getDataRange().getValues();
+      for (let i = 1; i < dados.length; i++) {
+        const cat = String(dados[i][0] || "").trim();
+        const nome = String(dados[i][1] || "").trim();
+        if (nome !== alvo) continue;
+        if (catAlvo && cat !== catAlvo) continue;
+        const recTipo = String(dados[i][4] || "").trim();
+        const valor = String(dados[i][5] || "").trim();
+        const novaData = feito ? somarIntervalo(dataHoje(), recTipo, valor) : "";
+        aba.getRange(i + 1, 7).setValue(novaData);
+        break;
+      }
+      return ContentService.createTextOutput(JSON.stringify({ status: "sucesso" }))
+        .setMimeType(ContentService.MimeType.JSON);
+    }
+
+    if (dadosRecebidos.acao === "SALVAR_ORDEM") {
       const ciclo = PropertiesService.getScriptProperties().getProperty("cicloAtual")
         || dadosRecebidos.idServico
         || "";
@@ -135,27 +184,26 @@ function doPost(e) {
         aba.appendRow(["idCiclo", "categoria", "tarefa", "tag", "posicao"]);
       }
 
-          if (dadosRecebidos.acao === "SALVAR_COMENTARIO") {
-      const abaLog = ss.getSheetByName("LOG");
-      const cicloCasa = PropertiesService.getScriptProperties().getProperty("cicloAtual")
-        || dadosRecebidos.idServico
-        || "SERVICO_PADRAO";
-      abaLog.appendRow([
-        cicloCasa,
-        dadosRecebidos.categoria,
-        dadosRecebidos.tarefa,
-        dadosRecebidos.tag || "Cozinha",
-        dadosRecebidos.done ? "CONCLUIDO" : "PENDENTE",
-        dadosRecebidos.horarioConclusao || "",
-        dadosRecebidos.comentario || ""
-      ]);
-      return ContentService.createTextOutput(JSON.stringify({ status: "sucesso" }))
-        .setMimeType(ContentService.MimeType.JSON);
-    }
+      if (dadosRecebidos.acao === "SALVAR_COMENTARIO") {
+        const abaLog = ss.getSheetByName("LOG");
+        const cicloCasa = PropertiesService.getScriptProperties().getProperty("cicloAtual")
+          || dadosRecebidos.idServico
+          || "SERVICO_PADRAO";
+        abaLog.appendRow([
+          cicloCasa,
+          dadosRecebidos.categoria,
+          dadosRecebidos.tarefa,
+          dadosRecebidos.tag || "Cozinha",
+          dadosRecebidos.done ? "CONCLUIDO" : "PENDENTE",
+          dadosRecebidos.horarioConclusao || "",
+          dadosRecebidos.comentario || ""
+        ]);
+        return ContentService.createTextOutput(JSON.stringify({ status: "sucesso" }))
+          .setMimeType(ContentService.MimeType.JSON);
+      }
 
       const itens = dadosRecebidos.itens || [];
       const dados = aba.getDataRange().getValues();
-      // Apaga só as linhas DESTE ciclo (de baixo para cima).
       for (let i = dados.length; i >= 2; i--) {
         if (String(dados[i - 1][0]) === String(ciclo)) {
           aba.deleteRow(i);
@@ -169,8 +217,6 @@ function doPost(e) {
         .setMimeType(ContentService.MimeType.JSON);
     }
 
-    
-    // Ação 2: Gravar marcação de status na aba LOG
     const abaLog = ss.getSheetByName("LOG");
     const { idServico, categoria, tarefa, tag, status, horarioConclusao } = dadosRecebidos;
 
@@ -195,4 +241,84 @@ function doPost(e) {
     return ContentService.createTextOutput(JSON.stringify({ status: "erro", mensagem: error.toString() }))
       .setMimeType(ContentService.MimeType.JSON);
   }
+}
+
+function ehRecorrente(tipo) {
+  const t = String(tipo || "").trim().toUpperCase();
+  if (!t || t === "TODOSERVICO" || t === "TODO SERVIÇO") return false;
+  return true;
+}
+
+function dataHoje() {
+  const s = Utilities.formatDate(new Date(), "America/Sao_Paulo", "yyyy-MM-dd");
+  const p = s.split("-");
+  return new Date(Number(p[0]), Number(p[1]) - 1, Number(p[2]));
+}
+
+function dataHojeBr() {
+  return Utilities.formatDate(new Date(), "America/Sao_Paulo", "dd/MM/yyyy");
+}
+
+function formatarDataPlanilha(valor) {
+  if (!valor) return "";
+  if (Object.prototype.toString.call(valor) === "[object Date]" && !isNaN(valor.getTime())) {
+    return Utilities.formatDate(valor, "America/Sao_Paulo", "dd/MM/yyyy");
+  }
+  return String(valor).trim();
+}
+
+function parseDataBr(texto) {
+  const t = String(texto || "").trim();
+  if (!t || t.indexOf("/") === -1) return null;
+  const p = t.split("/");
+  if (p.length < 3) return null;
+  let ano = Number(p[2]);
+  if (ano < 100) ano += 2000;
+  const dt = new Date(ano, Number(p[1]) - 1, Number(p[0]));
+  dt.setHours(0, 0, 0, 0);
+  return isNaN(dt.getTime()) ? null : dt;
+}
+
+function tarefaRecorrenteVencida(proximaEm) {
+  const dt = parseDataBr(proximaEm);
+  if (!dt) return true;
+  const hoje = dataHoje();
+  hoje.setHours(0, 0, 0, 0);
+  return dt.getTime() <= hoje.getTime();
+}
+
+function padraoDoTipo(tipo) {
+  const t = String(tipo || "").trim().toUpperCase();
+  if (t === "SEMI-MENSAL" || t === "SEMIMENSAL") return { n: 15, unidade: "dias" };
+  if (t === "MENSAL") return { n: 1, unidade: "meses" };
+  if (t === "BIMESTRAL") return { n: 2, unidade: "meses" };
+  if (t === "TRIMESTRAL") return { n: 3, unidade: "meses" };
+  if (t === "SEMESTRAL") return { n: 6, unidade: "meses" };
+  if (t === "ANUAL") return { n: 12, unidade: "meses" };
+  return { n: 1, unidade: "meses" };
+}
+
+function lerIntervalo(tipo, valorTexto) {
+  const fallback = padraoDoTipo(tipo);
+  const raw = String(valorTexto || "").trim().toLowerCase();
+  if (!raw) return fallback;
+  const m = raw.match(/(\d+)/);
+  if (!m) return fallback;
+  const n = Number(m[1]);
+  if (!n) return fallback;
+  if (/dia/.test(raw)) return { n: n, unidade: "dias" };
+  if (/ano/.test(raw)) return { n: n * 12, unidade: "meses" };
+  if (/mes/.test(raw)) return { n: n, unidade: "meses" };
+  return fallback;
+}
+
+function somarIntervalo(base, tipo, valorTexto) {
+  const iv = lerIntervalo(tipo, valorTexto);
+  const d = new Date(base.getTime());
+  if (iv.unidade === "dias") {
+    d.setDate(d.getDate() + iv.n);
+  } else {
+    d.setMonth(d.getMonth() + iv.n);
+  }
+  return Utilities.formatDate(d, "America/Sao_Paulo", "dd/MM/yyyy");
 }
