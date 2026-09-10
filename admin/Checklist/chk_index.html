@@ -343,6 +343,7 @@
     <button class="btn-tag" onclick="setSectorFilter('Cozinha')">Cozinha</button>
     <button class="btn-tag" onclick="setSectorFilter('Salão')">Salão</button>
     <button class="btn-tag active" id="btnHideDetalhes" onclick="toggleHideDetalhes()">Mostrar detalhes da tarefa</button>
+    <button class="btn-tag" id="btnVerTodasRec" onclick="toggleVerTodasRecorrentes()">Ver todas as tarefas</button>
   </div>
 
   <!-- Controles Principais -->
@@ -364,7 +365,9 @@
     let state = JSON.parse(localStorage.getItem("restaurantChecklistState")) || null;
     let hideCompleted = false;
     let hideDetalhes = true;
+    let verTodasRecorrentes = false;
     let currentSector = "Tudo";
+    const CAT_RECORRENTE = "TAREFA RECORRENTE";
     let isSyncing = false;
     let lastLocalUpdate = 0; // TRAVA DE SEGURANÇA: Registra o momento da última alteração local
 
@@ -406,7 +409,12 @@ async function fetchMasterFromSheets() {
               done: t.done || false,
              completedAt: t.completedAt || undefined,
               detalhe: t.detalhe || "",
-              comentario: t.comentario || ""
+              comentario: t.comentario || "",
+              isRecorrente: !!t.isRecorrente,
+              vencida: !!t.vencida,
+              recorrencia: t.recorrencia || "",
+              recorrenciaValor: t.recorrenciaValor || "",
+              proximaEm: t.proximaEm || ""
             }))
           }));
           
@@ -457,7 +465,8 @@ async function fetchMasterFromSheets() {
       });
     }
 
-    function addNewTaskToSheets(categoria, textoTarefa, tag) {
+    function addNewTaskToSheets(categoria, textoTarefa, tag, extra) {
+      extra = extra || {};
       const statusEl = document.getElementById("syncStatus");
       statusEl.innerText = "Salvando nova tarefa na aba MASTER...";
       isSyncing = true;
@@ -471,7 +480,9 @@ async function fetchMasterFromSheets() {
           acao: "CRIAR_TAREFA",
           categoria: categoria,
           tarefa: textoTarefa,
-          tag: tag
+          tag: tag,
+          recorrencia: extra.recorrencia || "",
+          recorrenciaValor: extra.recorrenciaValor || ""
         })
       })
       .then(() => {
@@ -501,7 +512,20 @@ async function fetchMasterFromSheets() {
       task.done = !task.done;
       
       let horarioFormatado = "";
-      lastLocalUpdate = Date.now(); // Ativa a trava para proteger a edição
+      lastLocalUpdate = Date.now();
+
+      if (task.isRecorrente) {
+        task.vencida = !task.done;
+        if (task.done) {
+          task.proximaEm = "próxima gravada na planilha";
+        } else {
+          task.proximaEm = "";
+        }
+        saveState();
+        render();
+        concluirRecorrenteNoSheets(categoria, task.text, task.done);
+        return;
+      }
 
       if (task.done) {
         const agora = new Date();
@@ -521,6 +545,43 @@ async function fetchMasterFromSheets() {
       render();
 
       sendLogToSheets(categoria, task.text, task.tag, task.done, horarioFormatado);
+    }
+
+    function concluirRecorrenteNoSheets(categoria, tarefa, feito) {
+      const statusEl = document.getElementById("syncStatus");
+      statusEl.innerText = "Atualizando recorrente...";
+      isSyncing = true;
+      fetch(API_URL, {
+        method: "POST",
+        mode: "no-cors",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          acao: "CONCLUIR_RECORRENTE",
+          categoria: categoria,
+          tarefa: tarefa,
+          feito: feito !== false
+        })
+      })
+      .then(function () {
+        statusEl.innerText = "✓ Recorrente atualizada";
+        setTimeout(function () { isSyncing = false; }, 4000);
+      })
+      .catch(function () {
+        statusEl.innerText = "⚠ Recorrente só neste aparelho";
+        isSyncing = false;
+      });
+    }
+
+    function toggleVerTodasRecorrentes() {
+      verTodasRecorrentes = !verTodasRecorrentes;
+      const btn = document.getElementById("btnVerTodasRec");
+      if (btn) {
+        btn.classList.toggle("active", verTodasRecorrentes);
+        btn.innerText = verTodasRecorrentes
+          ? "Só tarefas devidas"
+          : "Ver todas as tarefas";
+      }
+      render();
     }
 
         function salvarComentarioTarefa(catIdx, taskIdx, texto) {
@@ -614,6 +675,7 @@ async function fetchMasterFromSheets() {
         lastLocalUpdate = Date.now();
 
         state.forEach(cat => cat.tasks.forEach(t => {
+          if (t.isRecorrente) return;
           t.done = false;
           delete t.completedAt;
         }));
@@ -666,12 +728,20 @@ async function fetchMasterFromSheets() {
       let totalGeral = 0;
       let concluidasGeral = 0;
 
-      state.forEach((cat, catIdx) => {
-        const filteredTasks = cat.tasks.filter(t => currentSector === "Tudo" || t.tag === currentSector);
+      function tagBate(tag) {
+        if (currentSector === "Tudo") return true;
+        return String(tag || "").toLowerCase() === String(currentSector).toLowerCase();
+      }
 
-        // Preenche os acumuladores
-        totalGeral += filteredTasks.length;
-        concluidasGeral += filteredTasks.filter(t => t.done).length;
+      state.forEach((cat, catIdx) => {
+        const isRecCat = cat.category === CAT_RECORRENTE;
+        const filteredTasks = cat.tasks.filter(t => tagBate(t.tag));
+
+        // Recorrente não entra no 0/57 do expediente.
+        if (!isRecCat) {
+          totalGeral += filteredTasks.length;
+          concluidasGeral += filteredTasks.filter(t => t.done).length;
+        }
 
         if (filteredTasks.length === 0 && currentSector !== "Tudo") return;
 
@@ -697,11 +767,12 @@ async function fetchMasterFromSheets() {
         ul.dataset.catIdx = catIdx;
 
         cat.tasks.forEach((task, taskIdx) => {
-          if (currentSector !== "Tudo" && task.tag !== currentSector) return;
+          if (!tagBate(task.tag)) return;
+          if (task.isRecorrente && !verTodasRecorrentes && !task.vencida) return;
 
           const li = document.createElement("li");
           li.className = `task-item ${task.done ? 'completed' : ''}`;
-          li.draggable = true;
+          li.draggable = !task.isRecorrente;
           li.dataset.catIdx = catIdx;
           li.dataset.taskIdx = taskIdx;
 
@@ -731,6 +802,7 @@ async function fetchMasterFromSheets() {
                 <span class="task-tag">${task.tag || "Cozinha"}</span>
               </div>
               ${(!hideDetalhes && task.detalhe) ? `<span class="task-detalhe">${linkificarDetalhe(task.detalhe)}</span>` : ""}
+              ${task.isRecorrente ? `<span class="task-detalhe">${escaparHtml(task.recorrenciaValor || task.recorrencia || "")}${task.vencida ? ' · <b style="color:#b91c1c">atrasada</b>' : (task.proximaEm ? " · próxima " + escaparHtml(task.proximaEm) : "")}</span>` : ""}
               ${task.done && task.completedAt ? `<span class="task-meta">${task.completedAt}</span>` : ""}
               ${blocoNota}
             </div>
@@ -747,9 +819,25 @@ async function fetchMasterFromSheets() {
 
         const addForm = document.createElement("form");
         addForm.className = "add-form";
-        addForm.innerHTML = `
+        addForm.innerHTML = isRecCat ? `
+          <input type="text" placeholder="+ Nova recorrente..." required />
+          <select class="sel-tag">
+            <option value="Cozinha" ${currentSector === "Cozinha" ? "selected" : ""}>Cozinha</option>
+            <option value="ADM" ${currentSector === "ADM" ? "selected" : ""}>ADM</option>
+            <option value="Salão" ${currentSector === "Salão" ? "selected" : ""}>Salão</option>
+          </select>
+          <select class="sel-rec">
+            <option value="MENSAL">Mensal</option>
+            <option value="BIMESTRAL">Bimestral</option>
+            <option value="TRIMESTRAL">Trimestral</option>
+            <option value="SEMESTRAL">Semestral</option>
+            <option value="ANUAL">Anual</option>
+            <option value="SEMI-MENSAL">A cada 15 dias</option>
+          </select>
+          <button class="btn btn-secondary" type="submit">+</button>
+        ` : `
           <input type="text" placeholder="+ Nova tarefa nesta etapa..." required />
-          <select>
+          <select class="sel-tag">
             <option value="Cozinha" ${currentSector === "Cozinha" ? "selected" : ""}>Cozinha</option>
             <option value="ADM" ${currentSector === "ADM" ? "selected" : ""}>ADM</option>
             <option value="Salão" ${currentSector === "Salão" ? "selected" : ""}>Salão</option>
@@ -760,22 +848,40 @@ async function fetchMasterFromSheets() {
         addForm.onsubmit = (e) => {
           e.preventDefault();
           const input = addForm.querySelector("input");
-          const select = addForm.querySelector("select");
+          const select = addForm.querySelector(".sel-tag");
+          const selRec = addForm.querySelector(".sel-rec");
 
           const texto = input.value.trim();
           const tag = select.value;
+          const rec = selRec ? selRec.value : "";
+          const valorPadrao = {
+            "SEMI-MENSAL": "15 dias",
+            "MENSAL": "1 mes",
+            "BIMESTRAL": "2 meses",
+            "TRIMESTRAL": "3 meses",
+            "SEMESTRAL": "6 meses",
+            "ANUAL": "1 ano"
+          };
 
           if (texto) {
             cat.tasks.push({ 
               id: Date.now().toString(), 
               text: texto, 
               tag: tag, 
-              done: false 
+              done: false,
+              isRecorrente: isRecCat,
+              vencida: isRecCat,
+              recorrencia: rec,
+              recorrenciaValor: valorPadrao[rec] || "",
+              proximaEm: isRecCat ? "" : ""
             });
             saveState();
             render();
 
-            addNewTaskToSheets(cat.category, texto, tag);
+            addNewTaskToSheets(cat.category, texto, tag, isRecCat ? {
+              recorrencia: rec,
+              recorrenciaValor: valorPadrao[rec] || ""
+            } : {});
           }
         };
         catEl.appendChild(addForm);
@@ -835,6 +941,7 @@ async function fetchMasterFromSheets() {
 
       const itens = [];
       state.forEach(function (cat) {
+        if (cat.category === CAT_RECORRENTE) return;
         cat.tasks.forEach(function (t) {
           itens.push({
             categoria: cat.category,
