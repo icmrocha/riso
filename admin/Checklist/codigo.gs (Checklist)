@@ -154,6 +154,8 @@ function doPost(e) {
         .setMimeType(ContentService.MimeType.JSON);
     }
 
+    // Recorrente concluída: HISTÓRICO vai para o LOG (linha nova).
+    // G da MASTER só guarda a PRÓXIMA data — não é arquivo morto.
     if (dadosRecebidos.acao === "CONCLUIR_RECORRENTE") {
       const aba = ss.getSheetByName("MASTER");
       const alvo = String(dadosRecebidos.tarefa || "").trim();
@@ -167,8 +169,22 @@ function doPost(e) {
         if (catAlvo && cat !== catAlvo) continue;
         const recTipo = String(dados[i][4] || "").trim();
         const valor = String(dados[i][5] || "").trim();
+        const tagLinha = String(dados[i][2] || dadosRecebidos.tag || "Cozinha");
+        // Só atualiza G (próxima). Não apaga conclusão antiga.
         const novaData = feito ? somarIntervalo(dataHoje(), recTipo, valor) : "";
         aba.getRange(i + 1, 7).setValue(novaData);
+        if (feito) {
+          const abaLog = ss.getSheetByName("LOG");
+          abaLog.appendRow([
+            "RECORRENTE",
+            cat,
+            nome,
+            tagLinha,
+            "CONCLUIDO",
+            dadosRecebidos.horarioConclusao || dataHojeBr(),
+            ""
+          ]);
+        }
         break;
       }
       return ContentService.createTextOutput(JSON.stringify({ status: "sucesso" }))

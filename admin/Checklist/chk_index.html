@@ -343,7 +343,7 @@
     <button class="btn-tag" onclick="setSectorFilter('Cozinha')">Cozinha</button>
     <button class="btn-tag" onclick="setSectorFilter('Salão')">Salão</button>
     <button class="btn-tag active" id="btnHideDetalhes" onclick="toggleHideDetalhes()">Mostrar detalhes da tarefa</button>
-    <button class="btn-tag" id="btnVerTodasRec" onclick="toggleVerTodasRecorrentes()">Ver todas as tarefas</button>
+    <button class="btn-tag" id="btnVerTodasRec" onclick="irParaRecorrentes()">Ver Tarefas Recorrentes</button>
   </div>
 
   <!-- Controles Principais -->
@@ -514,16 +514,18 @@ async function fetchMasterFromSheets() {
       let horarioFormatado = "";
       lastLocalUpdate = Date.now();
 
+      // Recorrente: não usa o LOG do sábado como "feito".
+      // Só avisa o Script, que acrescenta linha no histórico e recalcula G.
       if (task.isRecorrente) {
         task.vencida = !task.done;
         if (task.done) {
-          task.proximaEm = "próxima gravada na planilha";
+          task.proximaEm = proximaDataLocal(task.recorrencia, task.recorrenciaValor);
         } else {
           task.proximaEm = "";
         }
         saveState();
         render();
-        concluirRecorrenteNoSheets(categoria, task.text, task.done);
+        concluirRecorrenteNoSheets(categoria, task.text, task.tag, task.done);
         return;
       }
 
@@ -547,10 +549,17 @@ async function fetchMasterFromSheets() {
       sendLogToSheets(categoria, task.text, task.tag, task.done, horarioFormatado);
     }
 
-    function concluirRecorrenteNoSheets(categoria, tarefa, feito) {
+    function concluirRecorrenteNoSheets(categoria, tarefa, tag, feito) {
       const statusEl = document.getElementById("syncStatus");
       statusEl.innerText = "Atualizando recorrente...";
       isSyncing = true;
+      const agora = new Date();
+      const horario = "Concluído " +
+        String(agora.getDate()).padStart(2, "0") + "/" +
+        String(agora.getMonth() + 1).padStart(2, "0") + "/" +
+        String(agora.getFullYear()).slice(-2) + " às " +
+        String(agora.getHours()).padStart(2, "0") + ":" +
+        String(agora.getMinutes()).padStart(2, "0");
       fetch(API_URL, {
         method: "POST",
         mode: "no-cors",
@@ -559,7 +568,9 @@ async function fetchMasterFromSheets() {
           acao: "CONCLUIR_RECORRENTE",
           categoria: categoria,
           tarefa: tarefa,
-          feito: feito !== false
+          tag: tag || "Cozinha",
+          feito: feito !== false,
+          horarioConclusao: horario
         })
       })
       .then(function () {
@@ -572,16 +583,51 @@ async function fetchMasterFromSheets() {
       });
     }
 
-    function toggleVerTodasRecorrentes() {
-      verTodasRecorrentes = !verTodasRecorrentes;
-      const btn = document.getElementById("btnVerTodasRec");
-      if (btn) {
-        btn.classList.toggle("active", verTodasRecorrentes);
-        btn.innerText = verTodasRecorrentes
-          ? "Só tarefas devidas"
-          : "Ver todas as tarefas";
+    // Rótulo curto da cadência para o card (não mexe no expediente).
+    function rotuloFrequencia(tipo, valor) {
+      const t = String(tipo || "").toUpperCase();
+      const v = String(valor || "").trim();
+      if (t === "SEMI-MENSAL") return v || "A cada 15 dias";
+      if (t === "MENSAL") return "Mensal";
+      if (t === "BIMESTRAL") return "Bimestral";
+      if (t === "TRIMESTRAL") return "Trimestral";
+      if (t === "SEMESTRAL") return "Semestral";
+      if (t === "ANUAL") return "Anual";
+      return v || t;
+    }
+
+    // Espelho local do cálculo do Script, só para a tela não esperar o GET.
+    function proximaDataLocal(tipo, valor) {
+      const agora = new Date();
+      const raw = String(valor || "").toLowerCase();
+      const nMatch = raw.match(/(\d+)/);
+      let n = nMatch ? Number(nMatch[1]) : 0;
+      let dias = false;
+      const t = String(tipo || "").toUpperCase();
+      if (/dia/.test(raw)) dias = true;
+      else if (/ano/.test(raw)) { n = n * 12; dias = false; }
+      else if (/mes/.test(raw)) dias = false;
+      else if (t === "SEMI-MENSAL") { n = 15; dias = true; }
+      else if (t === "MENSAL") n = 1;
+      else if (t === "BIMESTRAL") n = 2;
+      else if (t === "TRIMESTRAL") n = 3;
+      else if (t === "SEMESTRAL") n = 6;
+      else if (t === "ANUAL") n = 12;
+      if (!n) n = 1;
+      const d = new Date(agora.getFullYear(), agora.getMonth(), agora.getDate());
+      if (dias) d.setDate(d.getDate() + n);
+      else d.setMonth(d.getMonth() + n);
+      return String(d.getDate()).padStart(2, "0") + "/" +
+        String(d.getMonth() + 1).padStart(2, "0") + "/" +
+        d.getFullYear();
+    }
+
+    // Botão só leva até o bloco. Não altera filtro nem o 0/57.
+    function irParaRecorrentes() {
+      const alvo = document.getElementById("blocoRecorrentes");
+      if (alvo) {
+        alvo.scrollIntoView({ behavior: "smooth", block: "start" });
       }
-      render();
     }
 
         function salvarComentarioTarefa(catIdx, taskIdx, texto) {
@@ -747,6 +793,8 @@ async function fetchMasterFromSheets() {
 
         const catEl = document.createElement("div");
         catEl.className = "category";
+        // Âncora do botão "Ver Tarefas Recorrentes"
+        if (isRecCat) catEl.id = "blocoRecorrentes";
 
         const totalTasks = filteredTasks.length;
         const completedTasks = filteredTasks.filter(t => t.done).length;
@@ -802,8 +850,8 @@ async function fetchMasterFromSheets() {
                 <span class="task-tag">${task.tag || "Cozinha"}</span>
               </div>
               ${(!hideDetalhes && task.detalhe) ? `<span class="task-detalhe">${linkificarDetalhe(task.detalhe)}</span>` : ""}
-              ${task.isRecorrente ? `<span class="task-detalhe">${escaparHtml(task.recorrenciaValor || task.recorrencia || "")}${task.vencida ? ' · <b style="color:#b91c1c">atrasada</b>' : (task.proximaEm ? " · próxima " + escaparHtml(task.proximaEm) : "")}</span>` : ""}
-              ${task.done && task.completedAt ? `<span class="task-meta">${task.completedAt}</span>` : ""}
+              ${task.isRecorrente ? `<span class="task-detalhe"><span class="task-tag">${escaparHtml(rotuloFrequencia(task.recorrencia, task.recorrenciaValor))}</span>${task.vencida ? ' · <b style="color:#b91c1c">atrasada</b>' : (task.proximaEm ? " · próxima " + escaparHtml(task.proximaEm) : "")}</span>` : ""}
+              ${!task.isRecorrente && task.done && task.completedAt ? `<span class="task-meta">${task.completedAt}</span>` : ""}
               ${blocoNota}
             </div>
           `;
