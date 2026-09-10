@@ -11,6 +11,23 @@ function doGet(e) {
 
   const cicloAtual = PropertiesService.getScriptProperties().getProperty("cicloAtual") || "";
 
+  // Histórico das recorrentes: todas as linhas LOG com id RECORRENTE.
+  // Não entra no statusMap do sábado.
+  const historicoMap = {};
+  dadosLog.forEach(function (linha) {
+    if (String(linha[0]) !== "RECORRENTE") return;
+    const tarefa = linha[2];
+    const status = linha[4];
+    const horario = linha[5] ? String(linha[5]) : "";
+    if (!tarefa || !horario) return;
+    if (!(status === "CONCLUIDO" || status === "TRUE" || status === true)) return;
+    const chave = String(linha[1] || "") + "_" + String(tarefa);
+    if (!historicoMap[chave]) historicoMap[chave] = [];
+    historicoMap[chave].push(horario);
+    if (!historicoMap[String(tarefa)]) historicoMap[String(tarefa)] = [];
+    historicoMap[String(tarefa)].push(horario);
+  });
+
   const statusMap = {};
   dadosLog.forEach(function (linha) {
     const idServico = linha[0];
@@ -80,6 +97,10 @@ function doGet(e) {
       ? !vencida
       : (logExistente ? logExistente.done : false);
 
+    const histBruto = historicoMap[categoria + "_" + tarefa] || historicoMap[tarefa] || [];
+    // Mais recente primeiro; no máximo 3 na tela.
+    const historico = histBruto.slice().reverse().slice(0, 3);
+
     categoriasMap[categoria].tasks.push({
       text: tarefa,
       tag: tag || "Cozinha",
@@ -91,7 +112,8 @@ function doGet(e) {
       vencida: vencida,
       recorrencia: rec.recorrencia || "",
       recorrenciaValor: rec.recorrenciaValor || "",
-      proximaEm: rec.proximaEm || ""
+      proximaEm: rec.proximaEm || "",
+      historico: isRecorrente ? historico : []
     });
   }
 
@@ -120,8 +142,22 @@ function doGet(e) {
     });
   }
 
-  return ContentService.createTextOutput(JSON.stringify(Object.values(categoriasMap)))
+  const saida = Object.values(categoriasMap);
+  saida.forEach(function (cat) {
+    if (String(cat.category) !== "TAREFA RECORRENTE") return;
+    cat.tasks.sort(function (a, b) {
+      return dataSortKey(a.proximaEm) - dataSortKey(b.proximaEm);
+    });
+  });
+
+  return ContentService.createTextOutput(JSON.stringify(saida))
     .setMimeType(ContentService.MimeType.JSON);
+}
+
+function dataSortKey(texto) {
+  const dt = parseDataBr(texto);
+  if (!dt) return 0;
+  return dt.getTime();
 }
 
 function doPost(e) {

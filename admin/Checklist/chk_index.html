@@ -414,7 +414,8 @@ async function fetchMasterFromSheets() {
               vencida: !!t.vencida,
               recorrencia: t.recorrencia || "",
               recorrenciaValor: t.recorrenciaValor || "",
-              proximaEm: t.proximaEm || ""
+              proximaEm: t.proximaEm || "",
+              historico: t.historico || []
             }))
           }));
           
@@ -520,6 +521,13 @@ async function fetchMasterFromSheets() {
         task.vencida = !task.done;
         if (task.done) {
           task.proximaEm = proximaDataLocal(task.recorrencia, task.recorrenciaValor);
+          const agora = new Date();
+          const stamp = String(agora.getDate()).padStart(2, "0") + "/" +
+            String(agora.getMonth() + 1).padStart(2, "0") + "/" +
+            String(agora.getFullYear()).slice(-2) + " " +
+            String(agora.getHours()).padStart(2, "0") + ":" +
+            String(agora.getMinutes()).padStart(2, "0");
+          task.historico = [stamp].concat(task.historico || []).slice(0, 3);
         } else {
           task.proximaEm = "";
         }
@@ -584,6 +592,16 @@ async function fetchMasterFromSheets() {
     }
 
     // Rótulo curto da cadência para o card (não mexe no expediente).
+    function dataSortKeyFront(texto) {
+      const t = String(texto || "").trim();
+      const p = t.split("/");
+      if (p.length < 3) return 0;
+      let ano = Number(p[2]);
+      if (ano < 100) ano += 2000;
+      const dt = new Date(ano, Number(p[1]) - 1, Number(p[0]));
+      return isNaN(dt.getTime()) ? 0 : dt.getTime();
+    }
+
     function rotuloFrequencia(tipo, valor) {
       const t = String(tipo || "").toUpperCase();
       const v = String(valor || "").trim();
@@ -802,7 +820,9 @@ async function fetchMasterFromSheets() {
 
         const titleEl = document.createElement("div");
         titleEl.className = "category-title";
-        titleEl.innerHTML = `
+        titleEl.innerHTML = isRecCat ? `
+          <span>${cat.category}</span>
+        ` : `
           <span>${cat.category}</span>
           <span class="badge-progress ${isComplete ? 'complete' : ''}">
             ${completedTasks}/${totalTasks} ${isComplete ? '✓' : ''}
@@ -814,12 +834,21 @@ async function fetchMasterFromSheets() {
         ul.className = "task-list";
         ul.dataset.catIdx = catIdx;
 
-        cat.tasks.forEach((task, taskIdx) => {
+        // Recorrentes: ordem por próxima data (a mais cedo primeiro). Sempre visíveis.
+        let indices = cat.tasks.map(function (_, i) { return i; });
+        if (isRecCat) {
+          indices.sort(function (ia, ib) {
+            return dataSortKeyFront(cat.tasks[ia].proximaEm) - dataSortKeyFront(cat.tasks[ib].proximaEm);
+          });
+        }
+
+        indices.forEach((taskIdx) => {
+          const task = cat.tasks[taskIdx];
           if (!tagBate(task.tag)) return;
-          if (task.isRecorrente && !verTodasRecorrentes && !task.vencida) return;
 
           const li = document.createElement("li");
-          li.className = `task-item ${task.done ? 'completed' : ''}`;
+          // Sem classe completed nas recorrentes: "Esconder concluídas" não as some.
+          li.className = `task-item ${(!task.isRecorrente && task.done) ? 'completed' : ''}`;
           li.draggable = !task.isRecorrente;
           li.dataset.catIdx = catIdx;
           li.dataset.taskIdx = taskIdx;
@@ -850,7 +879,7 @@ async function fetchMasterFromSheets() {
                 <span class="task-tag">${task.tag || "Cozinha"}</span>
               </div>
               ${(!hideDetalhes && task.detalhe) ? `<span class="task-detalhe">${linkificarDetalhe(task.detalhe)}</span>` : ""}
-              ${task.isRecorrente ? `<span class="task-detalhe"><span class="task-tag">${escaparHtml(rotuloFrequencia(task.recorrencia, task.recorrenciaValor))}</span>${task.vencida ? ' · <b style="color:#b91c1c">atrasada</b>' : (task.proximaEm ? " · próxima " + escaparHtml(task.proximaEm) : "")}</span>` : ""}
+              ${task.isRecorrente ? `<span class="task-detalhe"><span class="task-tag">${escaparHtml(rotuloFrequencia(task.recorrencia, task.recorrenciaValor))}</span>${task.proximaEm ? " · próxima " + escaparHtml(task.proximaEm) : ""}${(task.historico && task.historico.length) ? "<br>Feita: " + escaparHtml(task.historico.join(" · ")) : ""}</span>` : ""}
               ${!task.isRecorrente && task.done && task.completedAt ? `<span class="task-meta">${task.completedAt}</span>` : ""}
               ${blocoNota}
             </div>
