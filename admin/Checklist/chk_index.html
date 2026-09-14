@@ -125,6 +125,21 @@
     .btn-danger { background-color: #ef4444; color: white; }
     .btn-secondary { background-color: #e2e8f0; color: #334155; }
 
+    /* Botões do carimbo das recorrentes — não herdam o flex:1 dos .btn do topo */
+    .btn-rec {
+      display: inline-block;
+      flex: none;
+      padding: 6px 10px;
+      margin: 4px 6px 0 0;
+      border: none;
+      border-radius: 6px;
+      font-size: 0.75rem;
+      font-weight: 700;
+      cursor: pointer;
+    }
+    .btn-rec-ok { background: var(--accent); color: #fff; }
+    .btn-rec-undo { background: #e2e8f0; color: #334155; }
+
     /* ==========================================================================
        4. CATEGORIAS E ITENS DA LISTA
        ========================================================================== */
@@ -415,7 +430,8 @@ async function fetchMasterFromSheets() {
               recorrencia: t.recorrencia || "",
               recorrenciaValor: t.recorrenciaValor || "",
               proximaEm: t.proximaEm || "",
-              historico: t.historico || []
+              historico: t.historico || [],
+              podeDesfazer: !!(t.podeDesfazer || (t.historico && t.historico[0] && historicoEhHoje(t.historico[0])))
             }))
           }));
           
@@ -515,27 +531,7 @@ async function fetchMasterFromSheets() {
       let horarioFormatado = "";
       lastLocalUpdate = Date.now();
 
-      // Recorrente: não usa o LOG do sábado como "feito".
-      // Só avisa o Script, que acrescenta linha no histórico e recalcula G.
-      if (task.isRecorrente) {
-        task.vencida = !task.done;
-        if (task.done) {
-          task.proximaEm = proximaDataLocal(task.recorrencia, task.recorrenciaValor);
-          const agora = new Date();
-          const stamp = String(agora.getDate()).padStart(2, "0") + "/" +
-            String(agora.getMonth() + 1).padStart(2, "0") + "/" +
-            String(agora.getFullYear()).slice(-2) + " " +
-            String(agora.getHours()).padStart(2, "0") + ":" +
-            String(agora.getMinutes()).padStart(2, "0");
-          task.historico = [stamp].concat(task.historico || []).slice(0, 3);
-        } else {
-          task.proximaEm = "";
-        }
-        saveState();
-        render();
-        concluirRecorrenteNoSheets(categoria, task.text, task.tag, task.done);
-        return;
-      }
+      if (task.isRecorrente) return;
 
       if (task.done) {
         const agora = new Date();
@@ -557,27 +553,79 @@ async function fetchMasterFromSheets() {
       sendLogToSheets(categoria, task.text, task.tag, task.done, horarioFormatado);
     }
 
-    function concluirRecorrenteNoSheets(categoria, tarefa, tag, feito) {
-      const statusEl = document.getElementById("syncStatus");
-      statusEl.innerText = "Atualizando recorrente...";
-      isSyncing = true;
+    function stampHoje() {
       const agora = new Date();
-      const horario = "Concluído " +
-        String(agora.getDate()).padStart(2, "0") + "/" +
+      return String(agora.getDate()).padStart(2, "0") + "/" +
         String(agora.getMonth() + 1).padStart(2, "0") + "/" +
         String(agora.getFullYear()).slice(-2) + " às " +
         String(agora.getHours()).padStart(2, "0") + ":" +
         String(agora.getMinutes()).padStart(2, "0");
+    }
+
+    function historicoEhHoje(texto) {
+      const m = String(texto || "").match(/(\d{1,2})\/(\d{1,2})\/(\d{2,4})/);
+      if (!m) return false;
+      const hoje = new Date();
+      let ano = Number(m[3]);
+      if (ano < 100) ano += 2000;
+      return Number(m[1]) === hoje.getDate() &&
+        Number(m[2]) === (hoje.getMonth() + 1) &&
+        ano === hoje.getFullYear();
+    }
+
+    // Carimbo: LOG ganha linha; G anda a frequência.
+    function carimbarRecorrente(catIdx, taskIdx) {
+      const task = state[catIdx].tasks[taskIdx];
+      const categoria = state[catIdx].category;
+      lastLocalUpdate = Date.now();
+      const horario = "Concluído " + stampHoje();
+      task.proximaEm = proximaDataLocal(task.recorrencia, task.recorrenciaValor);
+      task.historico = [horario].concat(task.historico || []).slice(0, 3);
+      task.podeDesfazer = true;
+      saveState();
+      render();
+      postRecorrente("CONCLUIR_RECORRENTE", categoria, task, horario);
+    }
+
+    // Só o carimbo de hoje. G volta a ser (penúltima Feita + intervalo).
+    function desfazerRecorrente(catIdx, taskIdx) {
+      const task = state[catIdx].tasks[taskIdx];
+      if (!task.podeDesfazer) return;
+      const categoria = state[catIdx].category;
+      lastLocalUpdate = Date.now();
+      task.historico = (task.historico || []).slice(1);
+      const anterior = task.historico[0];
+      if (anterior) {
+        const m = String(anterior).match(/(\d{1,2})\/(\d{1,2})\/(\d{2,4})/);
+        if (m) {
+          let ano = Number(m[3]);
+          if (ano < 100) ano += 2000;
+          const base = new Date(ano, Number(m[2]) - 1, Number(m[1]));
+          task.proximaEm = proximaDataAPartir(base, task.recorrencia, task.recorrenciaValor);
+        }
+      } else {
+        task.proximaEm = "";
+      }
+      task.podeDesfazer = false;
+      saveState();
+      render();
+      postRecorrente("DESFAZER_RECORRENTE", categoria, task, "");
+    }
+
+    function postRecorrente(acao, categoria, task, horario) {
+      const statusEl = document.getElementById("syncStatus");
+      statusEl.innerText = "Atualizando recorrente...";
+      isSyncing = true;
       fetch(API_URL, {
         method: "POST",
         mode: "no-cors",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          acao: "CONCLUIR_RECORRENTE",
+          acao: acao,
           categoria: categoria,
-          tarefa: tarefa,
-          tag: tag || "Cozinha",
-          feito: feito !== false,
+          tarefa: task.text,
+          tag: task.tag || "Cozinha",
+          feito: true,
           horarioConclusao: horario
         })
       })
@@ -633,6 +681,30 @@ async function fetchMasterFromSheets() {
       else if (t === "ANUAL") n = 12;
       if (!n) n = 1;
       const d = new Date(agora.getFullYear(), agora.getMonth(), agora.getDate());
+      if (dias) d.setDate(d.getDate() + n);
+      else d.setMonth(d.getMonth() + n);
+      return String(d.getDate()).padStart(2, "0") + "/" +
+        String(d.getMonth() + 1).padStart(2, "0") + "/" +
+        d.getFullYear();
+    }
+
+    function proximaDataAPartir(base, tipo, valor) {
+      const raw = String(valor || "").toLowerCase();
+      const nMatch = raw.match(/(\d+)/);
+      let n = nMatch ? Number(nMatch[1]) : 0;
+      let dias = false;
+      const t = String(tipo || "").toUpperCase();
+      if (/dia/.test(raw)) dias = true;
+      else if (/ano/.test(raw)) { n = n * 12; dias = false; }
+      else if (/mes/.test(raw)) dias = false;
+      else if (t === "SEMI-MENSAL") { n = 15; dias = true; }
+      else if (t === "MENSAL") n = 1;
+      else if (t === "BIMESTRAL") n = 2;
+      else if (t === "TRIMESTRAL") n = 3;
+      else if (t === "SEMESTRAL") n = 6;
+      else if (t === "ANUAL") n = 12;
+      if (!n) n = 1;
+      const d = new Date(base.getFullYear(), base.getMonth(), base.getDate());
       if (dias) d.setDate(d.getDate() + n);
       else d.setMonth(d.getMonth() + n);
       return String(d.getDate()).padStart(2, "0") + "/" +
@@ -870,16 +942,20 @@ async function fetchMasterFromSheets() {
               onclick="abrirEdicaoNota(${catIdx}, ${taskIdx})">nota</span>`;
           }
 
+          const acoesRec = task.isRecorrente
+            ? `<div><button type="button" class="btn-rec btn-rec-ok" onclick="carimbarRecorrente(${catIdx}, ${taskIdx})">Fiz hoje</button>${task.podeDesfazer ? `<button type="button" class="btn-rec btn-rec-undo" onclick="desfazerRecorrente(${catIdx}, ${taskIdx})">Desfazer último</button>` : ""}</div>`
+            : "";
+
           li.innerHTML = `
             <span class="drag-handle">⠿</span>
-            <input type="checkbox" ${task.done ? "checked" : ""} onchange="toggleTask(${catIdx}, ${taskIdx})">
+            ${task.isRecorrente ? "" : `<input type="checkbox" ${task.done ? "checked" : ""} onchange="toggleTask(${catIdx}, ${taskIdx})">`}
             <div class="task-main">
               <div class="task-head">
                 <span class="task-text">${task.text}</span>
                 <span class="task-tag">${task.tag || "Cozinha"}</span>
               </div>
               ${(!hideDetalhes && task.detalhe) ? `<span class="task-detalhe">${linkificarDetalhe(task.detalhe)}</span>` : ""}
-              ${task.isRecorrente ? `<span class="task-detalhe"><span class="task-tag">${escaparHtml(rotuloFrequencia(task.recorrencia, task.recorrenciaValor))}</span>${task.proximaEm ? " · próxima " + escaparHtml(task.proximaEm) : ""}${(task.historico && task.historico.length) ? "<br>Feita: " + escaparHtml(task.historico.join(" · ")) : ""}</span>` : ""}
+              ${task.isRecorrente ? `<span class="task-detalhe"><span class="task-tag">${escaparHtml(rotuloFrequencia(task.recorrencia, task.recorrenciaValor))}</span>${task.proximaEm ? " · próxima " + escaparHtml(task.proximaEm) : ""}${(task.historico && task.historico.length) ? "<br>Feita: " + escaparHtml(task.historico.join(" · ")) : ""}</span>${acoesRec}` : ""}
               ${!task.isRecorrente && task.done && task.completedAt ? `<span class="task-meta">${task.completedAt}</span>` : ""}
               ${blocoNota}
             </div>

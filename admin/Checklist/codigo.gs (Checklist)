@@ -92,14 +92,13 @@ function doGet(e) {
     const logExistente = statusMap[categoria + "_" + tarefa] || statusMap[tarefa] || null;
     const rec = recInfo || {};
     const isRecorrente = ehRecorrente(rec.recorrencia);
+    // Recorrente não usa "done" de G. Check persistente saiu do fluxo.
     const vencida = isRecorrente ? tarefaRecorrenteVencida(rec.proximaEm) : false;
-    const done = isRecorrente
-      ? !vencida
-      : (logExistente ? logExistente.done : false);
+    const done = isRecorrente ? false : (logExistente ? logExistente.done : false);
 
     const histBruto = historicoMap[categoria + "_" + tarefa] || historicoMap[tarefa] || [];
-    // Mais recente primeiro; no máximo 3 na tela.
     const historico = histBruto.slice().reverse().slice(0, 3);
+    const podeDesfazer = isRecorrente && historico.length > 0 && horarioEhHoje(historico[0]);
 
     categoriasMap[categoria].tasks.push({
       text: tarefa,
@@ -113,7 +112,8 @@ function doGet(e) {
       recorrencia: rec.recorrencia || "",
       recorrenciaValor: rec.recorrenciaValor || "",
       proximaEm: rec.proximaEm || "",
-      historico: isRecorrente ? historico : []
+      historico: isRecorrente ? historico : [],
+      podeDesfazer: podeDesfazer
     });
   }
 
@@ -207,21 +207,64 @@ function doPost(e) {
         const valor = String(dados[i][5] || "").trim();
         const tagLinha = String(dados[i][2] || dadosRecebidos.tag || "Cozinha");
         // Só atualiza G (próxima). Não apaga conclusão antiga.
-        const novaData = feito ? somarIntervalo(dataHoje(), recTipo, valor) : "";
-        aba.getRange(i + 1, 7).setValue(novaData);
-        if (feito) {
-          const abaLog = ss.getSheetByName("LOG");
-          abaLog.appendRow([
-            "RECORRENTE",
-            cat,
-            nome,
-            tagLinha,
-            "CONCLUIDO",
-            dadosRecebidos.horarioConclusao || dataHojeBr(),
-            ""
-          ]);
-        }
+        if (!feito) break;
+        aba.getRange(i + 1, 7).setValue(somarIntervalo(dataHoje(), recTipo, valor));
+        const abaLog = ss.getSheetByName("LOG");
+        abaLog.appendRow([
+          "RECORRENTE",
+          cat,
+          nome,
+          tagLinha,
+          "CONCLUIDO",
+          dadosRecebidos.horarioConclusao || dataHojeBr(),
+          ""
+        ]);
         break;
+      }
+      return ContentService.createTextOutput(JSON.stringify({ status: "sucesso" }))
+        .setMimeType(ContentService.MimeType.JSON);
+    }
+
+    // Apaga só o carimbo de HOJE no LOG e recalcula G pela penúltima Feita.
+    if (dadosRecebidos.acao === "DESFAZER_RECORRENTE") {
+      const abaMaster = ss.getSheetByName("MASTER");
+      const abaLog = ss.getSheetByName("LOG");
+      const alvo = String(dadosRecebidos.tarefa || "").trim();
+      const catAlvo = String(dadosRecebidos.categoria || "").trim();
+      const dadosLog = abaLog.getDataRange().getValues();
+      let apagou = false;
+      for (let i = dadosLog.length; i >= 2; i--) {
+        const lin = dadosLog[i - 1];
+        if (String(lin[0]) !== "RECORRENTE") continue;
+        if (String(lin[2] || "").trim() !== alvo) continue;
+        if (catAlvo && String(lin[1] || "").trim() !== catAlvo) continue;
+        if (!horarioEhHoje(lin[5])) break;
+        abaLog.deleteRow(i);
+        apagou = true;
+        break;
+      }
+      if (apagou) {
+        const dadosM = abaMaster.getDataRange().getValues();
+        for (let i = 1; i < dadosM.length; i++) {
+          const cat = String(dadosM[i][0] || "").trim();
+          const nome = String(dadosM[i][1] || "").trim();
+          if (nome !== alvo) continue;
+          if (catAlvo && cat !== catAlvo) continue;
+          const recTipo = String(dadosM[i][4] || "").trim();
+          const valor = String(dadosM[i][5] || "").trim();
+          const resto = abaLog.getDataRange().getValues();
+          let ultima = "";
+          for (let k = resto.length - 1; k >= 1; k--) {
+            if (String(resto[k][0]) !== "RECORRENTE") continue;
+            if (String(resto[k][2] || "").trim() !== alvo) continue;
+            ultima = resto[k][5];
+            break;
+          }
+          const base = parseDataDeHorario(ultima);
+          const novaG = base ? somarIntervalo(base, recTipo, valor) : "";
+          abaMaster.getRange(i + 1, 7).setValue(novaG);
+          break;
+        }
       }
       return ContentService.createTextOutput(JSON.stringify({ status: "sucesso" }))
         .setMimeType(ContentService.MimeType.JSON);
@@ -320,15 +363,24 @@ function formatarDataPlanilha(valor) {
 }
 
 function parseDataBr(texto) {
-  const t = String(texto || "").trim();
-  if (!t || t.indexOf("/") === -1) return null;
-  const p = t.split("/");
-  if (p.length < 3) return null;
-  let ano = Number(p[2]);
+  return parseDataDeHorario(texto);
+}
+
+function parseDataDeHorario(texto) {
+  const t = String(texto || "");
+  const m = t.match(/(\d{1,2})\/(\d{1,2})\/(\d{2,4})/);
+  if (!m) return null;
+  let ano = Number(m[3]);
   if (ano < 100) ano += 2000;
-  const dt = new Date(ano, Number(p[1]) - 1, Number(p[0]));
+  const dt = new Date(ano, Number(m[2]) - 1, Number(m[1]));
   dt.setHours(0, 0, 0, 0);
   return isNaN(dt.getTime()) ? null : dt;
+}
+
+function horarioEhHoje(texto) {
+  const dt = parseDataDeHorario(texto);
+  if (!dt) return false;
+  return dt.getTime() === dataHoje().getTime();
 }
 
 function tarefaRecorrenteVencida(proximaEm) {
