@@ -615,7 +615,9 @@ if (inputEl) {
         const itemState = savedState[item.name] || { qty: "", done: false };
         const hasQty = itemState.qty && itemState.qty.trim() !== "";
 
-        const matchesQuery = item.name.toLowerCase().includes(query) || item.category.toLowerCase().includes(query);
+                const matchesQuery = item.name.toLowerCase().includes(query)
+          || item.category.toLowerCase().includes(query)
+          || (item.marca && item.marca.toLowerCase().includes(query));
         const matchesToBuy = filterOnlyToBuy ? hasQty : true;
 
         return matchesQuery && matchesToBuy;
@@ -696,6 +698,13 @@ if (inputEl) {
         itemPrice.className = "item-price";
         itemPrice.textContent = `Preço Médio: ${item.price}`;
         itemInfo.appendChild(itemPrice);
+      }
+
+            if (item.marca) {
+        const itemMarca = document.createElement("span");
+        itemMarca.className = "item-price";
+        itemMarca.textContent = "Marcas de Referência: " + item.marca;
+        itemInfo.appendChild(itemMarca);
       }
 
       itemLeft.appendChild(checkbox);
