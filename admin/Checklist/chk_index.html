@@ -152,6 +152,20 @@
       border-left: 4px solid var(--primary);
     }
 
+.twistie {
+      display: inline-block;
+      width: 1.1em;
+      font-weight: 700;
+      color: #94a3b8;
+    }
+    .category.collapsed .task-list,
+    .category.collapsed .add-form {
+      display: none;
+    }
+    .category.collapsed .category-title {
+      margin-bottom: 0;
+    }
+
     .category-title {
       font-weight: 700;
       font-size: 0.95rem;
@@ -161,6 +175,8 @@
       display: flex;
       justify-content: space-between;
       align-items: center;
+      cursor: pointer;
+      user-select: none;
     }
 
     .badge-progress {
@@ -366,6 +382,7 @@
     <button class="btn btn-primary" id="toggleViewBtn" onclick="toggleHideCompleted()">Esconder Concluídas</button>
     <button class="btn btn-danger" onclick="resetChecklist()">Iniciar Novo Ciclo</button>
     <button class="btn btn-secondary" onclick="fetchMasterFromSheets()">Atualizar Agora</button>
+        <button class="btn btn-secondary" id="btnToggleSecoes" onclick="toggleTodasSecoes()">Recolher seções</button>
   </div>
 
   <!-- Onde o checklist será montado pelo JavaScript -->
@@ -383,6 +400,7 @@
     let verTodasRecorrentes = false;
     let currentSector = "Tudo";
     const CAT_RECORRENTE = "TAREFA RECORRENTE";
+        const secoesFechadas = new Set();
     let isSyncing = false;
     let lastLocalUpdate = 0; // TRAVA DE SEGURANÇA: Registra o momento da última alteração local
 
@@ -890,14 +908,19 @@ async function fetchMasterFromSheets() {
         const completedTasks = filteredTasks.filter(t => t.done).length;
         const isComplete = totalTasks > 0 && totalTasks === completedTasks;
 
+        const fechada = secoesFechadas.has(cat.category);
+        if (fechada) catEl.classList.add("collapsed");
+
         const titleEl = document.createElement("div");
         titleEl.className = "category-title";
+        titleEl.onclick = function () { toggleSecao(cat.category); };
+        const seta = fechada ? "▸" : "▾";
         titleEl.innerHTML = isRecCat ? `
-          <span>${cat.category}</span>
+          <span><span class="twistie">${seta}</span> ${cat.category}</span>
         ` : `
-          <span>${cat.category}</span>
-          <span class="badge-progress ${isComplete ? 'complete' : ''}">
-            ${completedTasks}/${totalTasks} ${isComplete ? '✓' : ''}
+          <span><span class="twistie">${seta}</span> ${cat.category}</span>
+          <span class="badge-progress ${isComplete ? "complete" : ""}">
+            ${completedTasks}/${totalTasks} ${isComplete ? "✓" : ""}
           </span>
         `;
         catEl.appendChild(titleEl);
@@ -1048,6 +1071,31 @@ async function fetchMasterFromSheets() {
         
         globalProgressEl.innerHTML = `Progresso do Serviço: <span style="color: ${corTextoGeral}">${concluidasGeral} / ${totalGeral}</span> tarefas (${percentual}%)`;
       }
+
+            const btn = document.getElementById("btnToggleSecoes");
+      if (btn) {
+        btn.innerText = secoesFechadas.size === 0 ? "Recolher seções" : "Expandir seções";
+      }
+    }
+
+    
+
+        function toggleSecao(nome) {
+      if (secoesFechadas.has(nome)) secoesFechadas.delete(nome);
+      else secoesFechadas.add(nome);
+      render();
+    }
+
+    function toggleTodasSecoes() {
+      const abertas = secoesFechadas.size === 0;
+      if (abertas) {
+        (state || []).forEach(function (cat) {
+          secoesFechadas.add(cat.category);
+        });
+      } else {
+        secoesFechadas.clear();
+      }
+      render();
     }
 
     /* ==========================================================================
