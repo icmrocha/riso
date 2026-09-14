@@ -12,6 +12,7 @@ function doGet() {
     var ingrediente = dataInsumos[i][0];
     var categoria = dataInsumos[i][1];
     var preco = dataInsumos[i][2];
+        var marca = dataInsumos[i][5]; // Coluna F — Marca de Referência
     
     if (ingrediente && ingrediente.toString().trim() !== "") {
       var precoFormatado = "";
@@ -24,7 +25,8 @@ function doGet() {
       masterList.push({
         name: ingrediente.toString().trim(),
         category: (categoria && categoria.toString().trim() !== "") ? categoria.toString().trim() : "Outros",
-        price: precoFormatado
+        price: precoFormatado,
+        marca: marca ? marca.toString().trim() : ""
       });
     }
   }
